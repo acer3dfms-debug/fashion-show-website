@@ -1,0 +1,1037 @@
+<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
+<html lang="en"> <!-- Root element with language set to English -->
+<head>
+  <meta charset="utf-8" /> <!-- Use UTF-8 character encoding -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" /> <!-- Responsive + use full safe area on iOS -->
+  <!-- Make the browser UI bars match the dark theme (iOS Safari honors media-specific theme-color) -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#15171c" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#15171c" />
+  <meta name="color-scheme" content="dark" />
+  <!-- The following two affect iOS only when added to Home Screen (PWA mode) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <title>Fashion Show</title> <!-- Browser tab title -->
+  <style>
+    :root { /* CSS variables for theme colors used throughout */
+      --bg: #15171c;            /* Dark grey marble base background */
+      --runway: #b60c2f;        /* Red carpet color */
+      --runway-edge: #f1cf63;   /* Gold accents */
+      --accent: #f1cf63;        /* Gold accents for UI */
+      --ui: #ffffff;            /* General UI text color */
+      --spot: rgba(255,255,255,0.06); /* Soft spotlight color */
+      --modal-bg: rgba(0,0,0,0.6);    /* Dim background behind modal */
+    }
+    html, body {
+      margin: 0; height: 100%; background: var(--bg); color: var(--ui); /* Full-height dark background */
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* Nice default font stack */
+      overflow: hidden; /* Hide scrollbars; camera handles movement */
+    }
+    #uiBar { /* Top translucent UI bar (fully disabled) */
+      position: fixed; left: 0; right: 0; top: 0; height: 0; padding: 0; z-index: 0;
+      background: transparent !important;
+      display: none !important; /* Completely hide bar and its gradient */
+      pointer-events: none;
+    }
+    #topNav, #uiBar .chip { display: none !important; }
+    #uiBar .chip { pointer-events: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(8px); } /* Small pill badges */
+    /* Top navigation (click to open sections) */
+    #topNav { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; display: flex; gap: 8px; align-items: center; justify-content: center; pointer-events: auto; overflow-x: auto; max-width: 92vw; padding: 2px 6px; } /* Centered, scrollable menu */
+    #topNav::-webkit-scrollbar { display: none; } /* Hide   WebKit */
+    .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); } /* Button styling */
+    .navBtn:hover { background: rgba(255,255,255,0.18); } /* Hover state */
+    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
+    #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
+    #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
+    #modal { width: min(720px, 92vw); max-height: 80vh; overflow: auto; background: #121219; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); } /* Modal panel */
+    #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; } /* Sticky modal header */
+    #modal .content { padding: 16px; } /* Modal content area */
+    #closeModal { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px 10px; cursor: pointer; } /* Close button */
+
+    /* Mobile controls (optional) */
+    #controls { position: fixed; right: 12px; bottom: 12px; display: grid; gap: 8px; z-index: 6; } /* Docked control cluster */
+    #controls button { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 12px; font-size: 14px; padding: 10px 12px; min-width: 44px; backdrop-filter: blur(6px); } /* Tappable buttons */
+
+    /* Prevent text selection / callout on touch for on-screen controls and HUD */
+    #controls, #controls button, #uiBar, #legend, #tooltip, canvas, .navBtn {
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-user-drag: none;
+      -khtml-user-select: none;
+    }
+    /* Remove blue tap highlight on mobile for interactive chrome */
+    #controls button, .navBtn, #closeModal {
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Keep modal content selectable for copy/paste */
+    #modal .content { user-select: text; -webkit-user-select: text; }
+    /* Keep the instruction box from spanning too wide in portrait mobile */
+    @media (orientation: portrait) and (max-width: 640px) {
+      #legend { max-width: min(88vw, 320px); }
+    }
+  </style>
+</head>
+<body> <!-- Page content -->
+  <div id="uiBar"> <!-- Top translucent bar with quick nav and badges -->
+    <nav id="topNav" aria-label="Quick Navigation"></nav> <!-- Buttons to jump to sections -->
+    <div class="chip">Fashion Show</div> <!-- Left badge text -->
+    <div class="chip">Arrow/A-D to walk · Enter to open</div> <!-- Short usage hint -->
+  </div>
+  <div id="legend"> <!-- Bottom-left legend with instructions -->
+    Walk to the right to explore sections. Stand under a marquee and press <b>Enter</b> to open it.
+  </div>
+  
+  <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
+  <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
+    <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
+      <header> <!-- Modal header with title and close action -->
+        <strong id="modalTitle">Section</strong> <!-- Title is filled in dynamically -->
+        <button id="closeModal" aria-label="Close">Close</button> <!-- Closes the modal -->
+      </header>
+      <div class="content" id="modalContent"> <!-- Container for section HTML content -->
+        <!-- populated dynamically -->
+      </div>
+    </div>
+  </div>
+  <canvas id="stage"></canvas> <!-- Fullscreen canvas used to draw the runway and avatar -->
+
+  <div id="controls" aria-hidden="false"> <!-- On-screen control buttons for touch/mobile -->
+    <button id="btnLeft" title="Walk left">◀</button> <!-- Walk left -->
+    <button id="btnRight" title="Walk right">▶</button> <!-- Walk right -->
+    <button id="btnEnter" title="Open section">Enter</button> <!-- Open the nearest section -->
+  </div>
+
+  <script>
+  (() => { // IIFE: wrap all logic to avoid leaking variables to global scope
+    // Minimal error overlay to surface runtime errors quickly
+    window.addEventListener('error', (e) => {
+      const el = document.createElement('div');
+      el.style.position = 'fixed'; el.style.bottom = '6px'; el.style.left = '6px';
+      el.style.zIndex = '9999'; el.style.background = 'rgba(200,0,0,0.9)'; el.style.color = '#fff';
+      el.style.padding = '6px 8px'; el.style.borderRadius = '6px'; el.style.fontSize = '12px';
+      el.textContent = 'Error: ' + (e?.message || 'unknown');
+      document.body.appendChild(el);
+    }, { once: true });
+
+    // Basic touch capability hint (used for mobile-only layout tweaks)
+    const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+
+    // On touch devices, prevent long-press text selection/callout on HUD and canvas
+    if ('ontouchstart' in window) {
+      document.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('#controls, canvas, #uiBar, #legend')) {
+          e.preventDefault();
+        }
+      }, { capture: true });
+    }
+    const canvas = document.getElementById('stage'); // Grab the canvas element
+    const ctx = canvas.getContext('2d'); // 2D drawing context for canvas
+
+    const DPR = Math.min(2, window.devicePixelRatio || 1); // Device pixel ratio (capped at 2 for perf)
+    let vw = window.innerWidth, vh = window.innerHeight; // Current viewport width/height in CSS pixels
+    let marbleTex = null; // Offscreen canvas for full-screen marble texture
+    let brandingImg = null; // Branding image (drawn on the main curtain)
+    let brandingReady = false; // Loaded flag
+
+    // Helper to choose a reasonable zoom for small screens
+    function autoScaleForWidth(width) {
+      let s = 1.75;
+      if (width <= 420) s = 1.15;      // small phones
+      else if (width <= 640) s = 1.25; // phones / small phablets
+      else if (width <= 900) s = 1.5;  // tablets / small laptops
+      return s;
+    }
+
+    function resize() { // Resize handler to keep canvas in sync with window
+      vw = window.innerWidth; vh = window.innerHeight; // Update viewport size
+      canvas.width = Math.floor(vw * DPR); // Set canvas backing width in device pixels
+      canvas.height = Math.floor(vh * DPR); // Set canvas backing height in device pixels
+      canvas.style.width = vw + 'px'; // Match CSS size
+      canvas.style.height = vh + 'px'; // Match CSS size
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); // Scale drawing so 1 unit = 1 CSS pixel
+      // Responsive zoom: on small screens, step back the camera a bit (use window.view to avoid TDZ)
+      if (window.view && window.view.autoScale) {
+        window.view.scale = autoScaleForWidth(vw);
+      }
+      // Landscape tweak: zoom out a bit when width > height
+      if (window.view && window.view.autoScaleLandscape) {
+        const isLandscape = vw > vh;
+        if (isLandscape) {
+          window.view.scale = (window.view.landscapeScale || 0.9); // pull back further in landscape
+        }
+      }
+      buildMarblePattern(); // Rebuild background texture for new size/theme
+    }
+    window.addEventListener('resize', resize); // Re-run on window resize
+    window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+    resize(); // Initialize canvas size immediately
+
+    // Load branding image helper (call once; safe to call again to change src)
+    function loadBranding(src) {
+      brandingReady = false;
+      brandingImg = new Image();
+      brandingImg.onload = () => { brandingReady = true; };
+      brandingImg.onerror = () => { brandingReady = false; };
+      brandingImg.src = src;
+    }
+    // Default expected filename (place this image next to index.html)
+    loadBranding('fashion-show-branding.png');
+    // Expose a setter for quick swaps via console if needed
+    window.setBrandingImage = (url) => loadBranding(url);
+
+    // Build a subtle marble texture as a repeated pattern
+    function buildMarblePattern() {
+      const cw = Math.max(1, Math.floor(vw));
+      const ch = Math.max(1, Math.floor(vh));
+      const off = document.createElement('canvas');
+      off.width = cw; off.height = ch;
+      const c = off.getContext('2d');
+      const bgCol = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#15171c';
+      c.fillStyle = bgCol; c.fillRect(0,0,cw,ch);
+
+      const area = cw * ch;
+      const diag = Math.hypot(cw, ch);
+
+      // cloudy areas for dark marble (soft lightening)
+      const cloudCount = Math.max(6, Math.floor(area / 180000));
+      for (let i = 0; i < cloudCount; i++) {
+        const x = Math.random()*cw;
+        const y = Math.random()*ch;
+        const r = diag * (0.10 + Math.random()*0.18);
+        const g = c.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0, 'rgba(255,255,255,0.07)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        c.fillStyle = g;
+        c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+      }
+
+      // subtle warm/cool tints for depth
+      const warmCount = Math.max(3, Math.floor(area / 350000));
+      for (let i = 0; i < warmCount; i++) {
+        const x = Math.random()*cw, y = Math.random()*ch, r = diag * (0.10 + Math.random()*0.14);
+        const tintWarm = c.createRadialGradient(x,y,0,x,y,r);
+        tintWarm.addColorStop(0, 'rgba(180,160,140,0.03)');
+        tintWarm.addColorStop(1, 'rgba(180,160,140,0)');
+        c.fillStyle = tintWarm; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+      }
+      const coolCount = Math.max(2, Math.floor(area / 480000));
+      for (let i = 0; i < coolCount; i++) {
+        const x = Math.random()*cw, y = Math.random()*ch, r = diag * (0.10 + Math.random()*0.14);
+        const tintCool = c.createRadialGradient(x,y,0,x,y,r);
+        tintCool.addColorStop(0, 'rgba(140,160,180,0.03)');
+        tintCool.addColorStop(1, 'rgba(140,160,180,0)');
+        c.fillStyle = tintCool; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+      }
+
+      // faint veins
+      c.lineCap = 'round';
+      const veinCount = Math.max(14, Math.floor(area / 220000));
+      for (let i = 0; i < veinCount; i++) {
+        const ang = (-25 + Math.random()*50) * Math.PI/180;
+        const len = diag * (0.5 + Math.random()*0.6);
+        const cx = Math.random()*cw;
+        const cy = Math.random()*ch;
+        const dx = Math.cos(ang)*len/2;
+        const dy = Math.sin(ang)*len/2;
+        c.strokeStyle = 'rgba(220,220,220,0.10)';
+        c.lineWidth = 1 + Math.random()*1.5;
+        c.shadowColor = 'rgba(0,0,0,0.10)';
+        c.shadowBlur = 2;
+        c.beginPath();
+        c.moveTo(cx-dx, cy-dy);
+        c.quadraticCurveTo(cx + (Math.random()-0.5)*60, cy + (Math.random()-0.5)*60, cx+dx, cy+dy);
+        c.stroke();
+        if (Math.random() < 0.4) {
+          c.beginPath(); c.moveTo(cx, cy);
+          c.quadraticCurveTo(cx + (Math.random()-0.5)*40, cy + (Math.random()-0.5)*40, cx+dx*0.35, cy+dy*0.35);
+          c.stroke();
+        }
+        // highlight
+        c.strokeStyle = 'rgba(255,255,255,0.12)';
+        c.shadowBlur = 0;
+        c.beginPath(); c.moveTo(cx-dx, cy-dy);
+        c.quadraticCurveTo(cx + (Math.random()-0.5)*50, cy + (Math.random()-0.5)*50, cx+dx, cy+dy);
+        c.stroke();
+      }
+      c.shadowBlur = 0;
+
+      // speckles scale with area
+      const speckCount = Math.floor(area / 2500);
+      for (let i = 0; i < speckCount; i++) {
+        const x = Math.random()*cw;
+        const y = Math.random()*ch;
+        c.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+        c.fillRect(x, y, 1, 1);
+      }
+
+      marbleTex = off; // store full-screen texture
+    }
+
+    // Draw branding image at spawn area behind the carpet (world-anchored)
+    function drawSpawnBranding() {
+      if (!(brandingReady && brandingImg && brandingImg.naturalWidth)) return;
+      const curtainTop = Math.max(60, world.runwayY() - (220 + CURTAIN_LIFT));
+      const carpetTop = world.runwayY() - 2; // top edge of carpet
+      const padAboveCarpet = 18;            // keep a gap above the carpet
+      const maxW = Math.min(520, vw * 0.5);
+      const maxH = Math.min(240, Math.max(60, carpetTop - padAboveCarpet - curtainTop));
+      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight);
+      const dw = Math.floor(brandingImg.naturalWidth * scale);
+      const dh = Math.floor(brandingImg.naturalHeight * scale);
+
+      // Center on the spawn X in world space
+      const dx = Math.floor(((SPAWN_X + BRAND_OFFSET_X) - camera.x) - dw / 2);
+      const dy = Math.floor(carpetTop - padAboveCarpet - dh);
+
+      ctx.save();
+      // very soft shadow so it sits on the wall behind
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 8;
+      ctx.drawImage(brandingImg, dx, dy, dw, dh);
+      ctx.restore();
+    }
+    // Draw a second stationary branding at the far right endcap (after last door)
+    function drawEndcapBranding(endX) {
+      if (!(brandingReady && brandingImg && brandingImg.naturalWidth)) return;
+      const curtainTop = Math.max(60, world.runwayY() - (220 + CURTAIN_LIFT));
+      const carpetTop = world.runwayY() - 2;
+      const padAboveCarpet = 18;
+      const maxW = Math.min(520, vw * 0.5);
+      const maxH = Math.min(240, Math.max(60, carpetTop - padAboveCarpet - curtainTop));
+      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight);
+      const dw = Math.floor(brandingImg.naturalWidth * scale);
+      const dh = Math.floor(brandingImg.naturalHeight * scale);
+      const dx = Math.floor((endX - camera.x) - dw / 2);
+      const dy = Math.floor(carpetTop - padAboveCarpet - dh);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 8;
+      ctx.drawImage(brandingImg, dx, dy, dw, dh);
+      ctx.restore();
+    }
+
+    // WORLD CONFIG
+    const world = {
+      width: 6000, // total catwalk length in px (world width)
+      runwayY: () => Math.floor(vh * 0.62), // Y position of runway relative to viewport
+      runwayW: () => Math.min(800, Math.max(420, vw * 0.6)), // Runway visual width
+      speed: 2.2, // Base movement speed factor
+      ambient: 0.25, // Ambient light factor (not used heavily here)
+    };
+
+    // PLAYER (simple avatar with stick-figure limbs)
+    const SPAWN_X = 360; // anchor for spawn area and branding placement
+    const player = {
+      x: SPAWN_X, y: 0, vy: 0, facing: 1, walking: false, t: 0, // position, velocity, facing, walk state, walk time
+      width: 32, height: 64, // player dimensions for drawing/placement
+    };
+
+    // CAMERA
+    const camera = { x: 0 }; // Camera x scroll position (y is fixed by design)
+    // Safe default zoom to avoid any auto-scale edge cases causing a blank scene
+    const view = { scale: 1.5, offsetX: 0, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
+    // Expose quick tuning via console: setViewScale(1.2..1.6)
+    window.view = view;
+    window.setViewScale = (s) => { view.autoScale = false; view.scale = Math.max(1, Math.min(2, Number(s)||1)); };
+    // Optional: adjust horizontal nudge via console: setViewOffset(px)
+    window.setViewOffset = (x) => { view.offsetX = Math.max(-200, Math.min(200, Number(x)||0)); };
+    // Optional: lock/unlock landscape auto zoom and set amount
+    window.setLandscapeAutoZoom = (on) => { view.autoScaleLandscape = !!on; if (on) resize(); };
+    window.setLandscapeZoom = (s) => { view.landscapeScale = Math.max(0.8, Math.min(2, Number(s)||0.9)); resize(); };
+    // Optional: toggle edge fades (disabled by default)
+    window.setEdgeFades = (on) => { view.edgeFades = !!on; };
+    window.setEdgeFadesLandscape = (on) => { view.edgeFadesInLandscape = !!on; };
+    // Stage layout: shift all marquees and carpet to the right to create a left entry area
+    const stage = { leftOffset: 600 };
+    // Raise the top valance a bit (in pixels). Increase to move it up more.
+    const CURTAIN_LIFT = 30;
+    // Branding horizontal offset relative to spawn (move image to the right)
+    const BRAND_OFFSET_X = 280;
+    // Ensure sizing applies with the now-defined view
+    try { resize(); } catch (_) {}
+
+    // INTERACTIVE SECTIONS (marquees along the runway)
+    /**
+     * Each section defines: x position, width, title, and content (HTML).
+     * The `x` is in world space; we subtract `camera.x` to get screen position.
+     */
+    const sections = [
+      { x: 400, w: 280, key: 'about', title: 'About the Show', content: `
+        <p>Welcome to the interactive catwalk website prototype. Walk to each marquee to open details.</p> <!-- Intro text for modal -->
+        <ul>
+          <li>Concept: Navigate by walking the avatar along the runway.</li> <!-- Concept bullet -->
+          <li>Goal: Turn site sections into spatial hotspots.</li> <!-- Goal bullet -->
+          <li>Tech: HTML5 Canvas + vanilla JS.</li> <!-- Tech bullet -->
+        </ul>
+      `},
+      { x: 1100, w: 320, key: 'looks', title: 'Looks & Designers', content: `
+        <p>Spotlight on featured designers and outfits. Replace this with your real content.</p> <!-- Placeholder copy -->
+        <p>Ideas: card grid with thumbnails, hover to zoom, click to open lookbook modal.</p> <!-- UX idea -->
+      `},
+      { x: 1900, w: 320, key: 'schedule', title: 'Schedule & Tickets', content: `
+        <p>Show dates, venue details, and ticket links. You can embed iframe widgets here.</p> <!-- Replace with real schedule -->
+        <p>Use this modal as a template for any rich content.</p> <!-- Suggestion for reuse -->
+      `},
+      { x: 2700, w: 320, key: 'judges', title: 'Judges & Hosts', content: `
+        <p>Short bios, socials, and headshots. Consider adding quick links or a carousel.</p> <!-- Judges info -->
+      `},
+      { x: 3500, w: 360, key: 'partners', title: 'Partners & Sponsors', content: `
+        <p>Logo wall with outbound links. You can track clicks or add spotlight animations.</p> <!-- Sponsors section -->
+      `},
+      { x: 4300, w: 360, key: 'gallery', title: 'Gallery', content: `
+        <p>Drop in screenshots, teaser videos, or embedded reels.</p> <!-- Gallery placeholder -->
+      `},
+      { x: 5200, w: 360, key: 'contact', title: 'Contact', content: `
+        <p>Contact form stub (replace with your real form service).</p> <!-- Contact info placeholder -->
+        <ul>
+          <li>Email: hello@example.com</li> <!-- Example email -->
+          <li>Discord: your-server</li> <!-- Example discord -->
+          <li>Inquiries: press / collabs / creators</li> <!-- Types of inquiries -->
+        </ul>
+      `},
+    ];
+
+    // Compute a little extra world to the right of the last door and position the endcap logo
+    const lastRightEdge = stage.leftOffset + Math.max.apply(null, sections.map(s => s.x + s.w));
+    const TAIL_GAP = 800; // space after last door
+    const ENDCAP_X = lastRightEdge + Math.floor(TAIL_GAP * 0.5); // center branding in the tail gap
+    // Ensure the world is wide enough to walk past the last door and see the endcap comfortably
+    world.width = Math.max(world.width, lastRightEdge + TAIL_GAP);
+
+    // INPUT
+    const keys = { left: false, right: false }; // Track whether left/right keys are pressed
+    window.addEventListener('keydown', e => { // Keyboard controls
+      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true; // Start walking left
+      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true; // Start walking right
+      if (e.key === 'Enter') tryOpen(); // Try opening section when Enter pressed
+    });
+    window.addEventListener('keyup', e => { // Stop walking when keys released
+      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false; // Stop left
+      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false; // Stop right
+    });
+
+    // Mobile buttons
+    const btnLeft = document.getElementById('btnLeft'); // Left button element
+    const btnRight = document.getElementById('btnRight'); // Right button element
+    const btnEnter = document.getElementById('btnEnter'); // Enter action button
+    const press = (k, v) => { keys[k] = v; }; // Helper to set key state
+    btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
+    btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
+    btnLeft.addEventListener('pointerleave',() => press('left', false)); // Stop if pointer leaves
+    btnRight.addEventListener('pointerdown',() => press('right', true)); // Hold right
+    btnRight.addEventListener('pointerup',  () => press('right', false)); // Release right
+    btnRight.addEventListener('pointerleave',() => press('right', false)); // Stop if pointer leaves
+    btnEnter.addEventListener('click', () => tryOpen()); // Tap to open
+
+    // MODAL
+    const modalWrap = document.getElementById('modalWrap'); // Overlay element
+    const modalTitle = document.getElementById('modalTitle'); // Title node inside modal
+    const modalContent = document.getElementById('modalContent'); // Content container
+    document.getElementById('closeModal').addEventListener('click', closeModal); // Close on button
+    modalWrap.addEventListener('click', (e) => { if (e.target === modalWrap) closeModal(); }); // Close when clicking backdrop
+    function openModal(title, html) { // Show modal with given title/content
+      modalTitle.textContent = title; // Set title text
+      modalContent.innerHTML = html; // Inject provided HTML content
+      modalWrap.style.display = 'grid'; // Reveal overlay (CSS grid centers modal)
+    }
+    function closeModal() { // Hide the modal overlay
+      modalWrap.style.display = 'none';
+    }
+
+    // Build top navigation from sections
+    const topNav = document.getElementById('topNav'); // Nav container in top bar
+    function buildTopNav() { // Create a button per section
+      if (!topNav) return; // Safety: no-op if nav missing
+      topNav.innerHTML = ''; // Clear previous items
+      sections.forEach(sec => { // For each section, add a button
+        const btn = document.createElement('button'); // Create button element
+        btn.type = 'button'; // Explicit type to avoid form defaults
+        btn.className = 'navBtn';
+        btn.textContent = sec.title; // Button label shows section title
+        btn.addEventListener('click', () => {
+          openModal(sec.title, sec.content); // Clicking opens its modal directly
+        });
+        topNav.appendChild(btn); // Add to nav bar
+      });
+    }
+    buildTopNav(); // Build the nav at startup
+
+    // TOOLTIP
+    const tooltip = document.getElementById('tooltip'); // Tooltip element
+    function showTooltip(scrX, scrY, text) { // Position and show tooltip
+      tooltip.textContent = text; // Set text
+      tooltip.style.left = scrX + 'px'; // Horizontal position
+      tooltip.style.top = scrY + 'px'; // Vertical position
+      tooltip.style.display = 'block'; // Make visible
+    }
+    function hideTooltip() { tooltip.style.display = 'none'; } // Hide tooltip
+
+    // OPEN section when near
+    function tryOpen() { // Attempts to open the nearest section if close
+      const near = nearestSection(); // Find nearest
+      if (near && near.dist < 80) openModal(near.sec.title, near.sec.content); // Open if within 80px
+    }
+
+    function nearestSection() { // Returns nearest section to player.x
+      let best = null; let bestDist = Infinity; let which = null; // Track best match
+      for (const sec of sections) { // Check each section
+        const center = stage.leftOffset + sec.x + sec.w/2; // Section center x (shifted by stage offset)
+        const d = Math.abs(center - player.x); // Distance to player
+        if (d < bestDist) { bestDist = d; which = sec; } // Keep if nearer
+      }
+      return which ? { sec: which, dist: bestDist } : null; // Return object or null
+    }
+
+    // DRAW helpers
+    function drawSpotlights() { // Moving soft spotlights to mimic stage lights (warm tone)
+      const baseY = world.runwayY() - 180; // Height above runway
+      const t = performance.now() * 0.001; // Time in seconds
+      // Anchor to visual screen center; compensate for scene nudge so lights stay centered
+      const centerX = vw * 0.5 - (view.offsetX || 0);
+      const spacing = 240; // distance between spot centers
+      const amp = 60;      // side-to-side oscillation amplitude
+      const rx = 180, ry = 36; // ellipse radii
+      const altDrop = 46;  // vertical drop for every other spotlight
+      for (let i = -2; i <= 2; i++) { // Create multiple spot ellipses
+        const cx = centerX + i * spacing + Math.sin(t + i) * amp;
+        const cy = baseY + (Math.abs(i) % 2 ? altDrop : 0); // stagger alternate lights lower
+        ctx.fillStyle = 'rgba(255,220,180,0.06)'; // Warm white
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); // Wide, shallow ellipse
+        ctx.fill();
+      }
+    }
+
+    function drawCurtains() { // Big red curtains framing the stage
+      const topH = Math.max(60, world.runwayY() - (220 + CURTAIN_LIFT)); // Height of top valance (raised)
+      // Extend width beyond screen so edges are never visible when zoomed out
+      const s = Number(view && view.scale) > 0 ? Number(view.scale) : 1;
+      const bleed = Math.max(200, Math.ceil((1/s - 1) * vw) + 200); // extra draw width on both sides
+      const fullW = vw + bleed * 2;
+      // Top valance with scalloped bottom edge
+      const grdTop = ctx.createLinearGradient(0, 0, 0, topH);
+      grdTop.addColorStop(0, '#7e0a16');
+      grdTop.addColorStop(1, '#d0142e');
+      ctx.fillStyle = grdTop;
+      ctx.beginPath();
+      ctx.moveTo(-bleed, 0);
+      ctx.lineTo(vw + bleed, 0);
+      ctx.lineTo(vw + bleed, topH);
+      // scallops along the bottom across extended width
+      const scallops = 8; const amp = 16; const baseY = topH - 8;
+      for (let i = scallops; i >= 0; i--) {
+        const x = (i / scallops) * fullW - bleed;
+        const cx = x + fullW / scallops / 2;
+        const y = baseY + Math.sin(i) * 2; // tiny irregularity
+        ctx.quadraticCurveTo(cx, baseY + amp, x - 1, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Subtle vertical fold texture on the top valance
+      ctx.save();
+      // Clip to the same valance shape
+      ctx.beginPath();
+      ctx.moveTo(-bleed, 0);
+      ctx.lineTo(vw + bleed, 0);
+      ctx.lineTo(vw + bleed, topH);
+      const scallops2 = 8; const amp2 = 16; const baseY2 = topH - 8;
+      for (let i = scallops2; i >= 0; i--) {
+        const x = (i / scallops2) * fullW - bleed;
+        const cx = x + fullW / scallops2 / 2;
+        const y = baseY2 + Math.sin(i) * 2;
+        ctx.quadraticCurveTo(cx, baseY2 + amp2, x - 1, y);
+      }
+      ctx.closePath();
+      ctx.clip();
+
+      // Draw alternating dark/light thin stripes with low alpha
+      for (let x = 8; x < vw; x += 22) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 2, topH + 10); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + 7, 0); ctx.lineTo(x + 5, topH + 10); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Side curtains
+      const sideW = 120; const sideH = Math.max(120, world.runwayY() - 80);
+      const grdSide = ctx.createLinearGradient(0, 0, sideW, 0);
+      grdSide.addColorStop(0, '#660812');
+      grdSide.addColorStop(0.5, '#c4122b');
+      grdSide.addColorStop(1, '#8f0d1b');
+
+      // Left (extend beyond screen)
+      ctx.fillStyle = grdSide;
+      ctx.fillRect(-bleed, 0, sideW + bleed, sideH);
+      // Right (mirror)
+      const grdSideR = ctx.createLinearGradient(vw - sideW, 0, vw, 0);
+      grdSideR.addColorStop(0, '#8f0d1b');
+      grdSideR.addColorStop(0.5, '#c4122b');
+      grdSideR.addColorStop(1, '#660812');
+      ctx.fillStyle = grdSideR;
+      ctx.fillRect(vw - sideW, 0, sideW + bleed, sideH);
+
+      // Fold lines on side curtains
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1.2;
+      for (let x = 12; x < sideW; x += 16) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 4, sideH); ctx.stroke();
+      }
+      for (let x = vw - sideW + 4; x < vw - 4; x += 16) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 4, sideH); ctx.stroke();
+      }
+
+      // (branding moved to spawn area; old top placement disabled)
+    }
+
+    function drawRunway() { // Draw runway, edges, and center stripes
+      const y = world.runwayY(); // Y coordinate for runway
+      const w = world.runwayW(); // Visual runway width (currently not used directly)
+      // edges (dark floor beyond runway) — extend beyond screen edges like curtains
+      ctx.fillStyle = '#1b1b24';
+      {
+        const s = Number(view && view.scale) > 0 ? Number(view.scale) : 1;
+        const bleed = Math.max(400, Math.ceil((1/s - 1) * vw) + 400);
+        ctx.fillRect(-bleed, y + 18, vw + bleed*2, vh - y); // Large rect covering bottom area
+      }
+      // Rope stanchions along the carpet sides (draw BEFORE carpet so carpet is in front)
+      const postStep = 140; // distance between posts
+      const topY = y - 6;   // near top edge of carpet
+      const botY = y + 28;  // near bottom edge of carpet
+      const gold = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge') || '#f1cf63';
+
+      // Build screen-space openings where rope should not cross
+      const openings = [];
+      for (const sec of sections) {
+        const left = (stage.leftOffset + sec.x) - camera.x + 18; // just inside left pillar (shifted stage)
+        const right = (stage.leftOffset + sec.x) - camera.x + sec.w - 18; // just inside right pillar
+        if (right < -50 || left > vw + 50) continue; // skip off-screen
+        openings.push({ left, right });
+      }
+
+      let prevX_rope = null;
+      for (let sx = -((camera.x % postStep) + postStep); sx < vw + postStep; sx += postStep) {
+        const insideOpening = openings.some(o => sx > o.left && sx < o.right);
+        // Posts: small vertical poles with a gold cap
+        ctx.strokeStyle = '#3a2a2a';
+        ctx.lineWidth = 3;
+        if (!insideOpening) {
+          // top row post (audience side only; no near-side post)
+          ctx.beginPath(); ctx.moveTo(sx, topY - 2); ctx.lineTo(sx, topY - 18); ctx.stroke();
+          // cap
+          ctx.fillStyle = gold;
+          ctx.beginPath(); ctx.arc(sx, topY - 20, 3, 0, Math.PI*2); ctx.fill();
+        }
+
+        // ropes between this and previous post (slight sag), clipped to openings
+        if (prevX_rope !== null) {
+          let segments = [[prevX_rope, sx]]; // list of drawable segments
+          for (const o of openings) {
+            const afterCut = [];
+            for (const seg of segments) {
+              let a = seg[0], b = seg[1];
+              const L = o.left, R = o.right;
+              const leftX = Math.min(a,b), rightX = Math.max(a,b);
+              if (rightX <= L || leftX >= R) { afterCut.push([a,b]); continue; }
+              // Intersection exists: keep parts outside [L,R]
+              if (leftX < L) afterCut.push([a < b ? leftX : leftX, a < b ? L : L]);
+              if (rightX > R) afterCut.push([a < b ? R : R, a < b ? rightX : rightX]);
+            }
+            segments = afterCut;
+          }
+          // Draw remaining segments
+          ctx.strokeStyle = gold;
+          ctx.lineWidth = 1.6;
+          for (const seg of segments) {
+            const a = seg[0], b = seg[1];
+            if (Math.abs(b - a) < 6) continue; // too short to see
+            const midX = (a + b) / 2;
+            // top rope (far/audience side only)
+            ctx.beginPath();
+            ctx.moveTo(a, topY - 18);
+            ctx.quadraticCurveTo(midX, topY - 12, b, topY - 18);
+            ctx.stroke();
+          }
+        }
+        prevX_rope = sx;
+      }
+      // runway (red carpet strip)
+      ctx.shadowColor = 'rgba(255,180,180,0.35)'; // Soft warm glow
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway'); // Use CSS variable
+      ctx.fillRect(-1000, y - 2, vw + 2000, 24); // Extend fully to left
+      ctx.shadowBlur = 0; // Reset shadow
+
+      // center studs (small gold circles like carpet tacks)
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge'); // Gold
+      for (let x = -((camera.x % 80)+80); x < vw + 80; x += 80) {
+        ctx.beginPath();
+        ctx.arc(x, y + 26, 2.2, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // (rope was drawn before carpet)
+    }
+
+    function drawMarquee(sec) { // Draw an interactive marquee for a section
+      const y = world.runwayY(); // Base Y
+      const screenX = (stage.leftOffset + sec.x) - camera.x; // Convert world X to screen X (shifted)
+      // Pillars (sides)
+      ctx.fillStyle = '#2a2a36';
+      ctx.fillRect(screenX, y - 220, 18, 220); // Left pillar
+      ctx.fillRect(screenX + sec.w - 18, y - 220, 18, 220); // Right pillar
+      // Header light box (top panel)
+      const grd = ctx.createLinearGradient(0, y - 220, 0, y - 140); // Vertical gradient
+      grd.addColorStop(0, '#3a3a4a');
+      grd.addColorStop(1, '#1c1c26');
+      ctx.fillStyle = grd;
+      ctx.fillRect(screenX + 18, y - 220, sec.w - 36, 80); // Panel between pillars
+      // Title text in the header
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 16px system-ui'; // Bold 16px
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sec.title, screenX + sec.w/2, y - 180); // Centered label
+      // Accent underglow strip
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+      ctx.globalAlpha = 0.4; // Semi transparent
+      ctx.fillRect(screenX + 20, y - 138, sec.w - 40, 4); // Thin bar under header
+      ctx.globalAlpha = 1; // Restore alpha
+
+      // Entrance curtains per section: fully open at center, close as you walk away
+      const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
+      const boxX = screenX + 18; const boxW = sec.w - 36; // between the pillars
+      // Taller curtains only on mobile landscape so header text is covered there,
+      // but keep desktop browsers at the original height.
+      const isMobileLandscape = (vw > vh) && IS_TOUCH;
+      const topValanceH = isMobileLandscape
+        ? Math.max(0, world.runwayY() - 260)
+        : Math.max(60, world.runwayY() - 220);
+      const curtainBottomY = world.runwayY() - 2; // stop at the top of the red carpet
+      const boxTop = topValanceH; const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
+      const centerXWorld = stage.leftOffset + sec.x + sec.w/2; // world center with stage offset
+      const dist = Math.abs(player.x - centerXWorld); // distance from player to center
+      const radius = 180; // distance at which curtains fully closed
+      const open = Math.max(0, Math.min(1, 1 - dist / radius)); // 0..1
+      const minCurtain = 10; // min width of each curtain when fully open
+      const overlap = 6; // small overlap so no sliver shows through
+      const gap = Math.max(0, open * (boxW - minCurtain*2) - overlap);
+      const half = boxW / 2;
+      const leftRight = boxX + half - gap/2; // right edge of left curtain
+      const rightLeft = boxX + half + gap/2; // left edge of right curtain
+
+      // Curtain gradients (deep red)
+      const redL = ctx.createLinearGradient(boxX, boxTop, boxX + half, boxTop);
+      redL.addColorStop(0, '#660812'); redL.addColorStop(0.5, '#c4122b'); redL.addColorStop(1, '#8f0d1b');
+      const redR = ctx.createLinearGradient(boxX + half, boxTop, boxX + boxW, boxTop);
+      redR.addColorStop(0, '#8f0d1b'); redR.addColorStop(0.5, '#c4122b'); redR.addColorStop(1, '#660812');
+
+      // Left curtain
+      ctx.fillStyle = redL;
+      ctx.fillRect(boxX, boxTop, Math.max(minCurtain, leftRight - boxX), boxH);
+      // Right curtain
+      ctx.fillStyle = redR;
+      ctx.fillRect(rightLeft, boxTop, Math.max(minCurtain, boxX + boxW - rightLeft), boxH);
+
+      // Fold lines for texture
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+      for (let x = boxX + 8; x < leftRight; x += 14) { ctx.beginPath(); ctx.moveTo(x, boxTop); ctx.lineTo(x - 3, boxTop + boxH); ctx.stroke(); }
+      for (let x = rightLeft + 4; x < boxX + boxW - 4; x += 14) { ctx.beginPath(); ctx.moveTo(x, boxTop); ctx.lineTo(x + 3, boxTop + boxH); ctx.stroke(); }
+
+      // (Removed gold tiebacks to avoid visual confusion)
+      // Instruction bubble if player is close — position just above the avatar's head
+      const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
+      if (d < 120) { // Show hint when near
+        // Player head approx position in screen coords
+        const px = (player.x - camera.x) + (view.offsetX || 0) + 16; // player anchor + head offset
+        const headY = y - 58; // head center relative to runway
+        const tipY = headY - 24; // a little above head
+        showTooltip(px, tipY, 'Press Enter to open');
+      }
+    }
+    
+
+    function drawPlayer() { // Fresh, simple stick-figure model and walk
+      const y = world.runwayY();             // Ground baseline (runway level)
+      const px = player.x - camera.x;        // Player X on screen
+      const groundY = y + 6;                 // Slightly below runway for shadow/feet
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(px + 16, y + 10, 20, 6, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      // Parameters for a clean, normal gait
+      const speed = 5.5;                     // Cadence
+      const phase = player.t * speed;        // Walk phase
+      const stride = 14;                     // Step length left-right
+      const stepHeight = 6;                  // Foot lift height when swinging forward
+      const bob = 0.9;                       // Light vertical bob
+
+      // Body anchors
+      const hips = { x: px + 16, y: y - 28 };        // Hip joint
+      const shoulders = { x: px + 16, y: y - 46 };   // Shoulder joint
+      const head = { x: px + 16, y: y - 58 };        // Head center
+
+      // Apply vertical bob evenly
+      const bobY = Math.abs(Math.sin(phase*0.5)) * bob;
+      hips.y -= bobY * 0.5;
+      shoulders.y -= bobY * 0.7;
+      head.y -= bobY * 0.9;
+
+      // Fresh limbs with simple sinusoidal swing
+      // Legs (single-segment for clarity): forward leg lifts slightly
+      function leg(legPhase, isBack) {
+        const s = Math.sin(phase + legPhase);
+        const footX = hips.x + s * stride;
+        const lift = Math.max(0, s) * stepHeight; // lift only when stepping forward
+        const footY = groundY - lift;
+        ctx.strokeStyle = isBack ? '#bfc3cb' : '#e3e6ed';
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(hips.x, hips.y);
+        ctx.lineTo(footX, footY);
+        ctx.stroke();
+        // small foot hint
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(footX - 3, footY);
+        ctx.lineTo(footX + 4, footY);
+        ctx.stroke();
+      }
+      // Draw back leg first, then front leg
+      leg(Math.PI, true);
+      leg(0, false);
+
+      // Torso (simple single line)
+      ctx.strokeStyle = '#e7e8ec';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(shoulders.x, shoulders.y);
+      ctx.lineTo(hips.x, hips.y);
+      ctx.stroke();
+
+      // Arms with gentle counter-swing
+      function arm(armPhase, isBack) {
+        const s = Math.sin(phase + armPhase + Math.PI); // counter to leg
+        const handX = shoulders.x + s * (stride * 0.3);
+        const handY = shoulders.y + 14; // keep mostly level
+        ctx.strokeStyle = isBack ? '#bfc3cb' : '#e3e6ed';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(shoulders.x, shoulders.y);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+      }
+      // Back arm first, then front
+      arm(Math.PI, true);
+      arm(0, false);
+
+      // Head (simple circle)
+      ctx.fillStyle = '#e7e8ec';
+      ctx.strokeStyle = '#111218';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawBackgroundParallax() { // Rows of audience dots moving slower than foreground (parallax)
+      const yBase = world.runwayY(); // Base y near runway level
+      const rows = 3; // Number of audience rows
+      for (let r = 0; r < rows; r++) { // For each row
+        const rowY = yBase - 50 - r*26; // Higher for further rows
+        const density = 0.002 * (r+1); // More sparse further back
+        for (let x = -100; x < vw + 100; x += 12) { // Across the screen
+          const wx = Math.floor((x + camera.x * (0.3 + r*0.15))); // World-ish x for randomization
+          // pseudo-random scatter using a simple LCG-like hash
+          if (((wx * 1103515245 + 12345) >>> 0) % Math.floor(1/density) === 0) {
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.12 + r*0.06) + ')'; // light dots for dark background
+            ctx.fillRect(x, rowY + ((wx>>3)%5), 2, 2); // Tiny audience dot
+          }
+        }
+      }
+    }
+
+    // FOREGROUND PAPARAZZI (blocky silhouettes with occasional camera flashes)
+    function drawPaparazziForeground() {
+      const y = world.runwayY();                     // runway baseline
+      // Keep silhouettes lower in landscape so they don't sit mid-screen
+      const isLandscape = vw > vh;
+      const footBase = isLandscape ? (vh - 50) : (vh - 160); // closer to bottom in landscape
+      const t = performance.now() * 0.001;
+      const spacing = 220;          // base spacing; draw two staggered rows (double amount)
+      const rx = 180, ry = 36;      // flash halo size
+
+      // simple deterministic pseudo-random
+      const rnd = (n) => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
+
+      for (let pass = 0; pass < 2; pass++) { // second pass doubles count
+        const xOffset = pass ? spacing / 2 : 0;   // stagger horizontally
+        const yDrop   = 0;                         // keep feet aligned at the bottom
+        // Iterate over world-space positions so figures are stationary in the world
+        const worldStart = Math.floor((camera.x - 160) / spacing) * spacing;
+        const worldEnd = camera.x + vw + 160;
+        for (let wx = worldStart; wx < worldEnd; wx += spacing) {
+          const cell = Math.floor((wx + xOffset) / spacing) + pass * 997;
+          const seed = cell * 918273 + 13579;
+          const jitter = (rnd(seed) - 0.5) * 80; // +/- 40px in screen space
+          const rawH = 72 + Math.floor(rnd(seed + 1) * 44); // 72..116
+          const w = 22 + Math.floor(rnd(seed + 2) * 10); // 22..32
+          const sx = Math.floor((wx - camera.x) + xOffset + jitter);
+          const footY = footBase + yDrop;
+          // Ensure silhouettes never overlap the carpet: clamp height to foreground space
+          const maxH = Math.max(24, footY - (y + 48));
+          const h = Math.min(rawH, maxH);
+
+          // Silhouette body (blocky / voxel-like)
+          ctx.save();
+          ctx.fillStyle = 'rgba(8,10,14,0.88)';
+          // body
+          ctx.fillRect(sx, footY - h, w, h);
+          // head (square)
+          const head = 16 + Math.floor(rnd(seed + 3) * 4);
+          ctx.fillRect(sx + Math.floor(w/2 - head/2), footY - h - head - 2, head, head);
+          // camera box: alternate facing left/right
+          const camW = 14, camH = 8;
+          const camY = footY - h - Math.floor(head * 0.5);
+          const faceRight = (cell % 2) === 0; // every other paparazzi faces left
+          const camX = faceRight ? (sx + w + 6) : (sx - 6 - camW);
+          ctx.fillRect(camX, camY, camW, camH);
+          // lens nub
+          if (faceRight) {
+            ctx.fillRect(camX + camW - 4, camY + 2, 4, 4);
+          } else {
+            ctx.fillRect(camX, camY + 2, 4, 4);
+          }
+          // arm to camera
+          if (faceRight) {
+            ctx.fillRect(sx + w - 3, camY + 2, 6, 6);
+          } else {
+            ctx.fillRect(sx - 3, camY + 2, 6, 6);
+          }
+
+          // occasional flash
+          const period = 2.5 + rnd(seed + 4) * 2.0;        // 2.5..4.5s
+          const phase = (t + rnd(seed + 5) * period) % period;
+          if (phase < 0.15) {
+            const fx = faceRight ? (camX + camW) : camX;
+            const fy = camY + camH / 2;
+            const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, rx);
+            g.addColorStop(0, 'rgba(255,255,220,0.25)');
+            g.addColorStop(1, 'rgba(255,255,220,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(fx, fy, rx, 0, Math.PI * 2); ctx.fill();
+            // bright sparkle
+            ctx.fillStyle = 'rgba(255,250,200,0.9)';
+            ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+    }
+
+    function update(dt) { // Update simulation for one frame
+      player.walking = false; // Reset walking flag
+      if (keys.left)  { player.x -= world.speed * 60 * dt; player.facing = -1; player.walking = true; } // Move left
+      if (keys.right) { player.x += world.speed * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
+      player.x = Math.max(0, Math.min(world.width, player.x)); // Clamp player within world bounds
+      if (player.walking) player.t += dt; else player.t *= 0.8; // Advance/reset walk cycle time
+
+      // camera follows with smoothing, while keeping player on-screen with margins
+      const baseTarget = player.x - vw * 0.4; // original follow bias
+      // Screen margin constraints (pixels) accounting for scene nudge
+      const margin = { left: 60, right: 60 };
+      const pxNudge = (view.offsetX || 0);
+      const lowerBound = player.x + pxNudge - (vw - margin.right); // min camera.x so player not off right
+      const upperBound = player.x + pxNudge - margin.left;          // max camera.x so player not off left
+      // World bounds
+      const worldMin = 0;
+      const worldMax = Math.max(0, world.width - vw);
+      // Valid camera range intersection
+      const camMin = Math.max(worldMin, lowerBound);
+      const camMax = Math.min(worldMax, upperBound);
+      // Clamp target into valid range
+      const target = Math.max(camMin, Math.min(camMax, baseTarget));
+      camera.x += (target - camera.x) * 0.12; // Ease camera towards target
+    }
+
+    let last = performance.now(); // Timestamp of previous frame
+    function frame(now) { // Main animation loop
+      const dt = Math.min(0.05, (now - last) / 1000); // Delta time in seconds (clamped)
+      last = now; // Store current time for next frame
+      update(dt); // Step the simulation
+
+      // Clear entire canvas in device pixels regardless of transform
+      ctx.save();
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // Apply view zoom anchored near the runway so it feels closer to the carpet
+      const s = Number(view.scale) > 0 ? Number(view.scale) : 1.5;
+      const xAnchor = vw * 0.5;           // anchor horizontally at screen center
+      const yAnchor = world.runwayY();    // anchor vertically at runway
+      const tx = xAnchor * (1 - s);
+      // When zoomed out (s < 1), clamping ty avoids a blank gray bar at the very top
+      const tyRaw = yAnchor * (1 - s);
+      const ty = Math.min(0, tyRaw);
+      ctx.setTransform(DPR * s, 0, 0, DPR * s, DPR * tx, DPR * ty);
+      // Optional extra nudge (not used by default; stage.leftOffset handles layout)
+      if (view.offsetX) ctx.translate(view.offsetX, 0);
+
+      // ambient background with subtle marble texture
+      const bgCol = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#12090c';
+      ctx.fillStyle = bgCol;
+      ctx.fillRect(0, 0, vw, vh);
+      if (marbleTex) {
+        ctx.save();
+        ctx.globalAlpha = 0.4; // subtle overlay
+        ctx.drawImage(marbleTex, 0, 0, vw, vh); // single, seamless texture
+        ctx.restore();
+      }
+
+      drawBackgroundParallax(); // Distant audience dots
+      drawCurtains();           // Big red curtains framing the stage
+      drawSpotlights();         // Moving soft lights (in front of curtains)
+      drawSpawnBranding();      // Branding at spawn, stays put as you walk away
+      drawEndcapBranding(ENDCAP_X); // Second branding after last door for a visual endcap
+      drawRunway();             // Ground and runway
+
+      // sections
+      hideTooltip(); // Hide tooltip before possibly showing it for a nearby section
+      for (const sec of sections) { // Render visible marquees
+        const scrX = (stage.leftOffset + sec.x) - camera.x; // Screen x for culling (shifted)
+        if (scrX + sec.w < -50 || scrX > vw + 50) continue; // Skip if far off-screen
+        drawMarquee(sec); // Draw this marquee
+      }
+      
+      drawPaparazziForeground(); // Foreground silhouettes and flashes (behind player)
+      drawPlayer(); // Draw the model/figure
+
+      // edge fades to soften edges (disabled by default to avoid visible side bands)
+      const bgCol2 = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#12090c';
+      const isLandscape = vw > vh;
+      if (view.edgeFades && (!isLandscape || view.edgeFadesInLandscape)) {
+        ctx.save();
+        if (view.offsetX) ctx.translate(-view.offsetX, 0); // undo scene nudge for fades
+        const g = ctx.createLinearGradient(0,0,80,0); g.addColorStop(0,bgCol2); g.addColorStop(1,'transparent'); // Left fade
+        ctx.fillStyle = g; ctx.fillRect(0,0,80,vh);
+        const g2 = ctx.createLinearGradient(vw,0,vw-80,0); g2.addColorStop(0,bgCol2); g2.addColorStop(1,'transparent'); // Right fade
+        ctx.fillStyle = g2; ctx.fillRect(vw-80,0,80,vh);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(frame); // Queue next frame
+    }
+    requestAnimationFrame(frame); // Kick off animation loop
+  })(); // End IIFE
+  </script>
+</body>
+</html>
