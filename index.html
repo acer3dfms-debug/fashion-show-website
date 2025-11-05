@@ -66,6 +66,10 @@
     }
     /* Keep modal content selectable for copy/paste */
     #modal .content { user-select: text; -webkit-user-select: text; }
+    /* CTA row and small notes inside modal */
+    .ctaRow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .assetNote { opacity: 0.85; font-size: 13px; margin-top: 6px; }
+    .muted { opacity: 0.8; }
     /* Keep the instruction box from spanning too wide in portrait mobile */
     @media (orientation: portrait) and (max-width: 640px) {
       #legend { max-width: min(88vw, 320px); }
@@ -76,10 +80,10 @@
   <div id="uiBar"> <!-- Top translucent bar with quick nav and badges -->
     <nav id="topNav" aria-label="Quick Navigation"></nav> <!-- Buttons to jump to sections -->
     <div class="chip">Fashion Show</div> <!-- Left badge text -->
-    <div class="chip">Arrow/A-D to walk · Enter to open</div> <!-- Short usage hint -->
+    <div class="chip">Arrows/WASD to walk · Up/Enter=open · Down=close</div> <!-- Short usage hint -->
   </div>
   <div id="legend"> <!-- Bottom-left legend with instructions -->
-    Walk to the right to explore sections. Stand under a marquee and press <b>Enter</b> to open it.
+    Walk to the left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open it. Press <b>Down</b> to close.
   </div>
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
@@ -97,9 +101,11 @@
   <canvas id="stage"></canvas> <!-- Fullscreen canvas used to draw the runway and avatar -->
 
   <div id="controls" aria-hidden="false"> <!-- On-screen control buttons for touch/mobile -->
-    <button id="btnLeft" title="Walk left">◀</button> <!-- Walk left -->
-    <button id="btnRight" title="Walk right">▶</button> <!-- Walk right -->
-    <button id="btnEnter" title="Open section">Enter</button> <!-- Open the nearest section -->
+    <button id="btnLeft"  title="Walk left" aria-label="Walk left">◀</button> <!-- Walk left -->
+    <button id="btnRight" title="Walk right" aria-label="Walk right">▶</button> <!-- Walk right -->
+    <button id="btnUp"    title="Open (Up)" aria-label="Open (Up)">▲</button> <!-- Open section -->
+    <button id="btnDown"  title="Close (Down)" aria-label="Close (Down)">▼</button> <!-- Close modal -->
+    <button id="btnEnter" title="Open section" aria-label="Open (Enter)">Enter</button> <!-- Open nearest section -->
   </div>
 
   <script>
@@ -320,7 +326,7 @@
       ambient: 0.25, // Ambient light factor (not used heavily here)
     };
 
-    // PLAYER (simple avatar with stick-figure limbs)
+    // PLAYER (blocky voxel-like avatar with normal gait)
     const SPAWN_X = 360; // anchor for spawn area and branding placement
     const player = {
       x: SPAWN_X, y: 0, vy: 0, facing: 1, walking: false, t: 0, // position, velocity, facing, walk state, walk time
@@ -356,40 +362,137 @@
      * Each section defines: x position, width, title, and content (HTML).
      * The `x` is in world space; we subtract `camera.x` to get screen position.
      */
-    const sections = [
-      { x: 400, w: 280, key: 'about', title: 'About the Show', content: `
-        <p>Welcome to the interactive catwalk website prototype. Walk to each marquee to open details.</p> <!-- Intro text for modal -->
+    // Sections will be defined below; remove placeholders to avoid confusion
+    // Single source of truth: sections are defined later with final content
+    let sections = [];
+
+    // Define sections used by the seven doors (final content)
+    sections = [
+      // Quick Sign-Up door near spawn (to the left)
+      { x: -585, w: 320, key: 'signup', title: 'Artist Quick Sign-Up', content: `
+        <p>Jump in fast. Open the raffle form to throw your name in and get the theme when slots are drawn.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Open Artist Raffle Form</a>
+          <a class="navBtn" href="#" data-close>Back to Runway</a>
+        </div>
+      `},
+      // Door 1 — About This Website
+      { x: 400, w: 320, key: 'about', title: 'The Fashion Show Website', content: `
+        <p>Step onto the stage. Use the arrow keys (or on-screen arrows) to walk left and right.</p>
+        <p>Stop under any door and press Enter to open a short popup about the show.</p>
+        <p>There are seven doors. Start anywhere, finish anywhere.</p>
+        <h4>Quick tips</h4>
         <ul>
-          <li>Concept: Navigate by walking the avatar along the runway.</li> <!-- Concept bullet -->
-          <li>Goal: Turn site sections into spatial hotspots.</li> <!-- Goal bullet -->
-          <li>Tech: HTML5 Canvas + vanilla JS.</li> <!-- Tech bullet -->
+          <li>Works on desktop and mobile</li>
+          <li>Modern browsers: Chrome, Edge, Safari, Firefox</li>
         </ul>
+        <div class="ctaRow">
+          <a class="navBtn" href="#" data-close>Start Walking</a>
+          <a class="navBtn" href="#" data-modal="troubleshooting">Troubleshooting</a>
+        </div>
       `},
-      { x: 1100, w: 320, key: 'looks', title: 'Looks & Designers', content: `
-        <p>Spotlight on featured designers and outfits. Replace this with your real content.</p> <!-- Placeholder copy -->
-        <p>Ideas: card grid with thumbnails, hover to zoom, click to open lookbook modal.</p> <!-- UX idea -->
+      // Door 2 — The Show
+      { x: 1100, w: 360, key: 'show', title: 'The Fashion Show Origin', content: `
+        <p>This show was seeded by a community grant from The Sandbox DAO—funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. We’re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://www.sandboxdao.com/" target="_blank" rel="noopener">Open The Sandbox DAO</a>
+          <a class="navBtn" href="https://forum.sandboxdao.com/t/sandbox-fashion-show/2744" target="_blank" rel="noopener">Read the Proposal</a>
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Get Updates (Discord)</a>
+        </div>
       `},
-      { x: 1900, w: 320, key: 'schedule', title: 'Schedule & Tickets', content: `
-        <p>Show dates, venue details, and ticket links. You can embed iframe widgets here.</p> <!-- Replace with real schedule -->
-        <p>Use this modal as a template for any rich content.</p> <!-- Suggestion for reuse -->
-      `},
-      { x: 2700, w: 320, key: 'judges', title: 'Judges & Hosts', content: `
-        <p>Short bios, socials, and headshots. Consider adding quick links or a carousel.</p> <!-- Judges info -->
-      `},
-      { x: 3500, w: 360, key: 'partners', title: 'Partners & Sponsors', content: `
-        <p>Logo wall with outbound links. You can track clicks or add spotlight animations.</p> <!-- Sponsors section -->
-      `},
-      { x: 4300, w: 360, key: 'gallery', title: 'Gallery', content: `
-        <p>Drop in screenshots, teaser videos, or embedded reels.</p> <!-- Gallery placeholder -->
-      `},
-      { x: 5200, w: 360, key: 'contact', title: 'Contact', content: `
-        <p>Contact form stub (replace with your real form service).</p> <!-- Contact info placeholder -->
+      // Door 3 — How the Show Works (In The Sandbox)
+      { x: 1900, w: 360, key: 'origin', title: 'What is the Fashion Show', content: `
+        <p>Each month, four featured artists present a themed gearset on a playable catwalk inside The Sandbox. Artists walk the runway for live judging, while the audience joins in from the stands.</p>
+        <p>During the show, attendees earn Catwalk Coins (CWK) by exploring, dancing, and other ways. Then they spend CWK to vote for their favorite creations. Judges' scores and audience votes are tallied together to spotlight the monthly winner.</p>
         <ul>
-          <li>Email: hello@example.com</li> <!-- Example email -->
-          <li>Discord: your-server</li> <!-- Example discord -->
-          <li>Inquiries: press / collabs / creators</li> <!-- Types of inquiries -->
+          <li>One main show every month</li>
+          <li>Four artists compete per show</li>
+          <li>Live panel scores: craft, originality, theme fit</li>
+          <li>Audience voting with CWK during timed windows (in-experience)</li>
+          <li>Live leaderboard moments</li>
         </ul>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://www.sandbox.game/en/experiences/The%20Sandbox%20-%20Fashion%20Show/e157abb3-bda0-44c5-a769-8f797f1ebbd4/page/" target="_blank" rel="noopener">Visit Experience Page</a>
+          <a class="navBtn" href="https://www.sandbox.game/en/create/vox-edit/" target="_blank" rel="noopener">Get VoxEdit (Create Gear)</a>
+          <a class="navBtn" href="https://www.sandbox.game/en/create/game-maker/" target="_blank" rel="noopener">Get Game Maker (Build Experiences)</a>
+        </div>
       `},
+      // Door 4 — Being an Artist on the Show
+      { x: 2700, w: 360, key: 'artists', title: 'Being an Artist', content: `
+        <p><strong>Build a full voxel gear set in VoxEdit and bring it to the runway.</strong></p>
+        <h4>What you make</h4>
+        <ul>
+          <li><strong>Required:</strong> Headpiece, Chest, Arms, Legs</li>
+          <li><strong>Optional:</strong> Main-hand and Off-hand equipment</li>
+          <li>Original work, show-safe, and created in VoxEdit</li>
+        </ul>
+        <h4>How selection works</h4>
+        <ul>
+          <li>Sign up on the Google Form to enter the primary raffle (new artists first).</li>
+          <li>If slots remain, a secondary raffle includes returning artists from past shows.</li>
+        </ul>
+        <h4>Timeline</h4>
+        <ul>
+          <li>A theme is announced after the raffle.</li>
+          <li>You have ~3 weeks to finish your gear set.</li>
+          <li>Deliverables: 3–5 hero images, short description, display name/socials (asset files for tech check).</li>
+        </ul>
+        <p><strong>Need help?</strong> Join Discord for Q&amp;A, feedback, and tech checks.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Artist Raffle Form</a>
+          <a class="navBtn" href="https://www.sandbox.game/en/create/vox-edit/" target="_blank" rel="noopener">Download VoxEdit</a>
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        </div>
+      `},
+      // Door 5 — Judging & How to Join
+      { x: 3500, w: 360, key: 'judging', title: 'Judging', content: `
+        <p>Artists show a gearset on the live runway while a panel scores each look and the audience adds momentum.</p>
+        <h4>Scoring (how winners are chosen)</h4>
+        <p><strong>Panel score (1–5 per judge):</strong> three judges each pick a number from 1–5.</p>
+        <p>Criteria the judges consider:</p>
+        <ul>
+          <li><strong>Craft &amp; Build Quality</strong> — clean geometry, detail, polish</li>
+          <li><strong>Originality &amp; Concept</strong> — idea strength, voice, inventiveness</li>
+          <li><strong>Runway Readability &amp; Presence</strong> — silhouette, staging, “reads” at a glance</li>
+          <li><strong>Theme Fit</strong> — how well it matches the show’s theme/prompt</li>
+        </ul>
+        <p><strong>Audience bonus (0–1):</strong> adds 0.0 → 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
+        <small>(Scaled per show; typically requires &gt; 5,000 CWK for the full +1.0 bonus.)</small></p>
+        <p><strong>Final tally</strong> = average panel score + audience bonus. Tie-breaks go to panel discussion.</p>
+      `},
+      // Door 6 — Join the Community
+      { x: 4300, w: 380, key: 'community', title: 'Join the Community', content: `
+        <p>Backstage passes live on Discord. Get announcements, submission windows, tech checks, WIP feedback, and post-show recaps. Meet other creators, share progress, and help shape what comes next.</p>
+        <h4>What you\u2019ll find</h4>
+        <ul>
+          <li><code>#announcements</code> &mdash; dates, themes, results</li>
+          <li><code>#artist-signup</code> &mdash; raffle reminders &amp; guidelines</li>
+          <li><code>#wip-critique</code> &mdash; share progress, get feedback</li>
+          <li><code>#tech-help</code> &mdash; VoxEdit/GameMaker setup help</li>
+          <li><code>#show-chat</code> &mdash; watch parties &amp; discussion</li>
+        </ul>
+        <h4>Roles &amp; pings</h4>
+        <ul>
+          <li>Artist / Judge / Audience roles</li>
+          <li>Opt-in @Showtime and @ThemeDrop alerts</li>
+        </ul>
+        <p>Friendly, modded, PG-13 space. Zero harassment. Bring good vibes.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+          <a class="navBtn" href="#" data-modal="rules">Read Server Rules</a>
+          <a class="navBtn" href="#" data-modal="ask">Ask a Question</a>
+        </div>
+      `},
+      // Door 7 — Schedule & Following Along
+      { x: 5200, w: 380, key: 'schedule', title: 'Schedule & Following Along', content: `
+        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channel—live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
+        <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during “Fun Stream Nights” on Twitch.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Follow on Twitch</a>
+          <a class="navBtn" href="https://x.com/ImDream_Studio" target="_blank" rel="noopener">Follow on X</a>
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        </div>
+      `}
     ];
 
     // Compute a little extra world to the right of the last door and position the endcap logo
@@ -400,20 +503,27 @@
     world.width = Math.max(world.width, lastRightEdge + TAIL_GAP);
 
     // INPUT
-    const keys = { left: false, right: false }; // Track whether left/right keys are pressed
+    const keys = { left: false, right: false, run: false }; // Track walking directions and run modifier
     window.addEventListener('keydown', e => { // Keyboard controls
-      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true; // Start walking left
-      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true; // Start walking right
-      if (e.key === 'Enter') tryOpen(); // Try opening section when Enter pressed
+      const k = e.key;
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
+      if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
+      if (k === 'Enter' || k === 'ArrowUp' || k === 'w' || k === 'W') { tryOpen(); e.preventDefault(); }
+      if (k === 'ArrowDown' || k === 's' || k === 'S') { closeModal(); e.preventDefault(); }
+      if (k === 'Shift') { keys.run = true; }
     });
     window.addEventListener('keyup', e => { // Stop walking when keys released
-      if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false; // Stop left
-      if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false; // Stop right
+      const k = e.key;
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false; // Stop left
+      if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false; // Stop right
+      if (k === 'Shift') keys.run = false; // Stop running
     });
 
     // Mobile buttons
-    const btnLeft = document.getElementById('btnLeft'); // Left button element
+    const btnLeft  = document.getElementById('btnLeft'); // Left button element
     const btnRight = document.getElementById('btnRight'); // Right button element
+    const btnUp    = document.getElementById('btnUp'); // Up/open button
+    const btnDown  = document.getElementById('btnDown'); // Down/close button
     const btnEnter = document.getElementById('btnEnter'); // Enter action button
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
@@ -422,6 +532,8 @@
     btnRight.addEventListener('pointerdown',() => press('right', true)); // Hold right
     btnRight.addEventListener('pointerup',  () => press('right', false)); // Release right
     btnRight.addEventListener('pointerleave',() => press('right', false)); // Stop if pointer leaves
+    btnUp.addEventListener('click', () => tryOpen()); // Tap up to open
+    btnDown.addEventListener('click', () => closeModal()); // Tap down to close
     btnEnter.addEventListener('click', () => tryOpen()); // Tap to open
 
     // MODAL
@@ -438,6 +550,96 @@
     function closeModal() { // Hide the modal overlay
       modalWrap.style.display = 'none';
     }
+
+    // Allow CTA links inside modals to cross-open sections or close
+    const TROUBLESHOOTING_HTML = `
+      <h4>Quick fixes (most issues)</h4>
+      <ul>
+        <li><b>Hard refresh:</b> Ctrl/Cmd + Shift + R</li>
+        <li><b>Rotate device:</b> try landscape on mobile</li>
+        <li><b>Close other tabs:</b> free a bit of memory/CPU</li>
+      </ul>
+      <h4>If Enter doesn’t open doors</h4>
+      <ul>
+        <li>Make sure the avatar is centered under the door</li>
+        <li>Try the on-screen Enter button</li>
+        <li>Click the page once to give it focus, then press Enter</li>
+      </ul>
+      <h4>If you can’t move</h4>
+      <ul>
+        <li>Click the page, then use ← / → or the on-screen arrows</li>
+        <li>On mobile, tap the arrows; long-press to keep walking</li>
+      </ul>
+      <h4>If popups look cut off</h4>
+      <ul>
+        <li>Zoom 100% (Ctrl/Cmd + 0)</li>
+        <li>On mobile, rotate to landscape</li>
+      </ul>
+      <h4>If it feels slow</h4>
+      <ul>
+        <li>Close heavy apps/tabs, then reload</li>
+        <li>Older phones: give it a few seconds after load</li>
+      </ul>
+      <h4>Blank page or errors</h4>
+      <ul>
+        <li>Try another browser (Chrome/Edge recommended)</li>
+        <li>Check your connection and reload</li>
+      </ul>
+      <h4>Need help?</h4>
+      <p>Join our Discord for live support.</p>
+      <div class="ctaRow">
+        <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        <a class="navBtn" href="#" data-close>Back to Site</a>
+      </div>
+    `;
+    const SERVER_RULES_HTML = `
+      <p><strong>Be kind, be creative, be safe.</strong></p>
+      <ul>
+        <li><strong>Respect first.</strong> No harassment, hate speech, or personal attacks.</li>
+        <li><strong>Keep it show-safe.</strong> No NSFW, gore, or infringing content.</li>
+        <li><strong>Credit creators.</strong> Share only work you own or have permission to post.</li>
+        <li><strong>Stay on topic.</strong> Use the right channels (announcements, WIP, help, etc.).</li>
+        <li><strong>No spam/scams.</strong> No ads, token shills, or unsolicited DMs.</li>
+        <li><strong>Follow staff directions.</strong> Moderators’ decisions keep things safe and fair.</li>
+      </ul>
+      <p>Questions or issues? Open Ask a Question here or ping a mod in <code>#help-desk</code> once you join.</p>
+      <div class="ctaRow">
+        <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        <a class="navBtn" href="#" data-close>Back</a>
+      </div>
+    `;
+    const ASK_HTML = `
+      <p><strong>Need help fast?</strong></p>
+      <ul>
+        <li><strong>Tech or setup questions:</strong> join and post in <code>#help-desk</code>.</li>
+        <li><strong>Artist logistics (raffle, deadlines, specs):</strong> ask in <code>#artist-signup</code>.</li>
+        <li><strong>Private matters or reports:</strong> DM a moderator once you’re in.</li>
+      </ul>
+      <p>If you don’t use Discord, you can still reach us at <em>[your email here]</em>.</p>
+      <div class="ctaRow">
+        <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        <a class="navBtn" href="#" data-close>Back</a>
+      </div>
+    `;
+    function openSectionByKey(key) {
+      const sec = sections.find(s => s.key === key);
+      if (sec) openModal(sec.title, sec.content);
+    }
+    modalContent.addEventListener('click', (e) => {
+      const closeA = e.target.closest('a[data-close]');
+      if (closeA) { e.preventDefault(); closeModal(); return; }
+      const modalA = e.target.closest('a[data-modal]');
+      if (modalA) {
+        e.preventDefault();
+        const which = modalA.getAttribute('data-modal');
+        if (which === 'troubleshooting') openModal('Troubleshooting', TROUBLESHOOTING_HTML);
+        else if (which === 'rules') openModal('Server Rules', SERVER_RULES_HTML);
+        else if (which === 'ask') openModal('Ask a Question', ASK_HTML);
+        return;
+      }
+      const a = e.target.closest('a[data-open]');
+      if (a) { e.preventDefault(); openSectionByKey(a.getAttribute('data-open')); }
+    });
 
     // Build top navigation from sections
     const topNav = document.getElementById('topNav'); // Nav container in top bar
@@ -750,96 +952,128 @@
         const px = (player.x - camera.x) + (view.offsetX || 0) + 16; // player anchor + head offset
         const headY = y - 58; // head center relative to runway
         const tipY = headY - 24; // a little above head
-        showTooltip(px, tipY, 'Press Enter to open');
+        showTooltip(px, tipY, 'Press Up or Enter to open');
       }
     }
     
 
-    function drawPlayer() { // Fresh, simple stick-figure model and walk
-      const y = world.runwayY();             // Ground baseline (runway level)
-      const px = player.x - camera.x;        // Player X on screen
-      const groundY = y + 6;                 // Slightly below runway for shadow/feet
+    function drawPlayer() { // Blocky/voxel-like character with normal gait
+      const baseY = world.runwayY();                // Ground baseline (runway level)
+      const px = player.x - camera.x;               // Player X on screen
+      const facing = player.facing || 1;            // 1 or -1
 
       // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath();
-      ctx.ellipse(px + 16, y + 10, 20, 6, 0, 0, Math.PI*2);
+      ctx.ellipse(px + 16, baseY + 10, 22, 6, 0, 0, Math.PI*2);
       ctx.fill();
 
-      // Parameters for a clean, normal gait
-      const speed = 5.5;                     // Cadence
-      const phase = player.t * speed;        // Walk phase
-      const stride = 14;                     // Step length left-right
-      const stepHeight = 6;                  // Foot lift height when swinging forward
-      const bob = 0.9;                       // Light vertical bob
+      // Walk cycle params
+      const cadence = 5.2;                          // steps per second-ish
+      const phase = player.t * cadence;             // phase angle
+      const gait = Math.sin(phase);
+      const bob = 0;                                // keep anchors fixed; no vertical bob
 
-      // Body anchors
-      const hips = { x: px + 16, y: y - 28 };        // Hip joint
-      const shoulders = { x: px + 16, y: y - 46 };   // Shoulder joint
-      const head = { x: px + 16, y: y - 58 };        // Head center
+      // Model proportions (in pixels)
+      const torsoW = 18, torsoH = 24;
+      const headS = 14;
+      const upperArm = 14, foreArm = 12, armT = 5;
+      const thigh = 18, shin = 18, legT = 6;
 
-      // Apply vertical bob evenly
-      const bobY = Math.abs(Math.sin(phase*0.5)) * bob;
-      hips.y -= bobY * 0.5;
-      shoulders.y -= bobY * 0.7;
-      head.y -= bobY * 0.9;
+      // Anchor (hips) and shoulders
+      const hips = { x: px + 16, y: baseY - 22 - bob }; // lowered ~10px to sit on carpet
+      const shoulders = { x: hips.x, y: hips.y - torsoH + 2 };
 
-      // Fresh limbs with simple sinusoidal swing
-      // Legs (single-segment for clarity): forward leg lifts slightly
-      function leg(legPhase, isBack) {
-        const s = Math.sin(phase + legPhase);
-        const footX = hips.x + s * stride;
-        const lift = Math.max(0, s) * stepHeight; // lift only when stepping forward
-        const footY = groundY - lift;
-        ctx.strokeStyle = isBack ? '#bfc3cb' : '#e3e6ed';
-        ctx.lineWidth = 2.8;
-        ctx.beginPath();
-        ctx.moveTo(hips.x, hips.y);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
-        // small foot hint
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(footX - 3, footY);
-        ctx.lineTo(footX + 4, footY);
-        ctx.stroke();
+      // No canvas flip; keep anchors absolutely fixed to prevent any jumping
+
+      // Helper: draw a rotated rectangle segment anchored at (ax,ay)
+      // Adds a small overlap into the parent joint to avoid gaps and draws an outline.
+      function segment(ax, ay, len, thick, angleRad, color) {
+        const overlap = 2; // pixels to bury into the parent joint to hide seams
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(angleRad);
+        ctx.fillStyle = color;
+        ctx.fillRect(-thick/2, -overlap, thick, len + overlap);
+        // outline for consistency with head/torso
+        ctx.strokeStyle = '#101218';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(-thick/2)+0.5, Math.round(-overlap)+0.5, thick, len + overlap);
+        ctx.restore();
+        // return end point of the segment (for chaining)
+        return {
+          x: ax + Math.sin(angleRad) * len,
+          y: ay + Math.cos(angleRad) * len,
+        };
       }
-      // Draw back leg first, then front leg
-      leg(Math.PI, true);
-      leg(0, false);
 
-      // Torso (simple single line)
-      ctx.strokeStyle = '#e7e8ec';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(shoulders.x, shoulders.y);
-      ctx.lineTo(hips.x, hips.y);
-      ctx.stroke();
+      // Determine limb angles for a normal gait
+      const thighAmp = 0.55;  // radians swing ~31°
+      const shinBase = 0.25;  // base knee bend
+      const armAmp = 0.45;    // arm swing ~26°
 
-      // Arms with gentle counter-swing
-      function arm(armPhase, isBack) {
-        const s = Math.sin(phase + armPhase + Math.PI); // counter to leg
-        const handX = shoulders.x + s * (stride * 0.3);
-        const handY = shoulders.y + 14; // keep mostly level
-        ctx.strokeStyle = isBack ? '#bfc3cb' : '#e3e6ed';
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.moveTo(shoulders.x, shoulders.y);
-        ctx.lineTo(handX, handY);
-        ctx.stroke();
+      // Back vs front decision so we render depth correctly
+      // When gait>0, left leg forward, right back (arbitrary); draw back limb first
+      const drawBackFirst = gait > 0; // simplifies ordering
+
+      // Colors (slight depth shading for back limbs)
+      const frontCol = '#e6e9ef';
+      const backCol  = '#c9cdd6';
+      const bodyCol  = '#e9ecf3';
+      const outline  = '#101218';
+
+      // Legs
+      function drawLeg(side) { // side: -1 = left, +1 = right
+        const swing = (side === -1 ? gait : -gait);
+        const legAng = swing * thighAmp + 0.03; // single solid limb angle
+        const color = (swing < 0 ? backCol : frontCol);
+        // Compute length so ankle hits the carpet regardless of angle
+        const startX = hips.x + side*6, startY = hips.y - 2;
+        const dy = (baseY - startY);
+        const cosA = Math.max(0.6, Math.cos(legAng)); // avoid extreme lengths near 90°
+        const legLen = Math.max(thigh + shin - 2, dy / cosA);
+        segment(startX, startY, legLen, legT, legAng, color);
+        // no feet: legs meet the carpet directly
       }
-      // Back arm first, then front
-      arm(Math.PI, true);
-      arm(0, false);
 
-      // Head (simple circle)
-      ctx.fillStyle = '#e7e8ec';
-      ctx.strokeStyle = '#111218';
+      // Arms (counter-swing to legs)
+      function drawArm(side) { // side: -1 = left, +1 = right
+        const swing = (side === -1 ? -gait : gait);
+        const armAng = swing * armAmp - 0.1; // single solid arm angle
+        const color = (swing > 0 ? backCol : frontCol);
+        // Anchor stays fixed at torso edge; prevents any lateral 'teleporting'
+        const torsoLeft  = shoulders.x - torsoW/2;
+        const torsoRight = shoulders.x + torsoW/2;
+        const anchorX = (side === -1) ? (torsoLeft + 2) : (torsoRight - 2);
+        const anchorY = shoulders.y + 4;
+        segment(anchorX, anchorY, upperArm + foreArm, armT, armAng, color);
+      }
+
+      // Draw order: back leg, back arm, torso+head, front arm, front leg
+      if (drawBackFirst) { drawLeg(+1); drawArm(+1); } else { drawLeg(-1); drawArm(-1); }
+
+      // Torso (block)
+      ctx.save();
+      ctx.fillStyle = bodyCol;
+      ctx.strokeStyle = outline;
       ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(head.x, head.y, 8, 0, Math.PI*2);
-      ctx.fill();
-      ctx.stroke();
+      ctx.fillRect(shoulders.x - torsoW/2, shoulders.y, torsoW, torsoH);
+      ctx.strokeRect(shoulders.x - torsoW/2, shoulders.y, torsoW, torsoH);
+      ctx.restore();
+
+      // Head (square)
+      ctx.save();
+      ctx.fillStyle = bodyCol;
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = 1.2;
+      const headX = shoulders.x - headS/2;
+      const headY = shoulders.y - headS - 4;
+      ctx.fillRect(headX, headY, headS, headS);
+      ctx.strokeRect(headX, headY, headS, headS);
+      ctx.restore();
+
+      // Front limbs on top
+      if (drawBackFirst) { drawArm(-1); drawLeg(-1); } else { drawArm(+1); drawLeg(+1); }
     }
 
     function drawBackgroundParallax() { // Rows of audience dots moving slower than foreground (parallax)
@@ -939,10 +1173,11 @@
 
     function update(dt) { // Update simulation for one frame
       player.walking = false; // Reset walking flag
-      if (keys.left)  { player.x -= world.speed * 60 * dt; player.facing = -1; player.walking = true; } // Move left
-      if (keys.right) { player.x += world.speed * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
+      const runMul = keys.run ? 3.6 : 1; // Shift to run (doubled sprint speed)
+      if (keys.left)  { player.x -= world.speed * runMul * 60 * dt; player.facing = -1; player.walking = true; } // Move left
+      if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
       player.x = Math.max(0, Math.min(world.width, player.x)); // Clamp player within world bounds
-      if (player.walking) player.t += dt; else player.t *= 0.8; // Advance/reset walk cycle time
+      if (player.walking) player.t += dt * (keys.run ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running (doubled)
 
       // camera follows with smoothing, while keeping player on-screen with margins
       const baseTarget = player.x - vw * 0.4; // original follow bias
