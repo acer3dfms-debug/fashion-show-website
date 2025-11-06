@@ -39,7 +39,9 @@
     #topNav::-webkit-scrollbar { display: none; } /* Hide   WebKit */
     .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); } /* Button styling */
     .navBtn:hover { background: rgba(255,255,255,0.18); } /* Hover state */
-    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
+    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 28px 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
+    #legend .legendClose { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
+    #legend .legendClose:hover { background: rgba(255,255,255,0.2); }
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
     #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(10px, -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
@@ -92,6 +94,7 @@
     <div class="chip">Arrows/WASD to walk · Up/Enter=open · Down=close</div> <!-- Short usage hint -->
   </div>
   <div id="legend"> <!-- Bottom-left legend with instructions -->
+    <button class="legendClose" title="Dismiss" aria-label="Dismiss">×</button>
     Walk to the left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open it. Press <b>Down</b> to close.
   </div>
   
@@ -1105,6 +1108,22 @@
     }
     buildTopNav(); // Build the nav at startup
 
+    // Legend dismiss (non-persistent: always shows again on reload)
+    (function setupLegendDismiss(){
+      const legend = document.getElementById('legend');
+      if (!legend) return;
+      // Always show on page load (ignore any previous persistence)
+      legend.style.display = '';
+      // Clean up any old persistent flag that might have been set earlier
+      try { localStorage.removeItem('legendDismissed'); } catch(_) {}
+      const btn = legend.querySelector('.legendClose');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          legend.style.display = 'none';
+        });
+      }
+    })();
+
     // TOOLTIP
     const tooltip = document.getElementById('tooltip'); // Tooltip element
     function showTooltip(scrX, scrY, text) { // Position and show tooltip
@@ -1373,6 +1392,64 @@
       ctx.fillRect(screenX + 20, headerBottom + 2, sec.w - 40, 4); // Thin bar under header
       ctx.globalAlpha = 1; // Restore alpha
 
+      // Flashing bulbs around clickable header panel (door button)
+      (function drawHeaderLights(){
+        const hx = screenX + 18; // header box x
+        const hy = headerTop;    // header box y
+        const hw = sec.w - 36;   // header box width
+        const hh = 80;           // header box height
+        const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
+        ctx.save();
+        // Twinkling bulbs along the frame (no outline)
+        const t = performance.now() * 0.001;
+        const bulbSpacing = 20;
+        const bulbR = 2.4;
+        ctx.globalCompositeOperation = 'screen';
+        // Top edge bulbs
+        for (let x = hx; x <= hx + hw; x += bulbSpacing) {
+          const i = Math.floor((x - hx) / bulbSpacing);
+          const phase = i * 0.55;
+          const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
+          const a = 0.16 + Math.pow(pulse, 6) * 0.84;
+          const gx = x, gy = hy - 4;
+          const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.0);
+          g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+          g.addColorStop(1, 'rgba(241,207,99,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+        }
+        // Bottom edge bulbs
+        for (let x = hx + bulbSpacing/2; x <= hx + hw; x += bulbSpacing) {
+          const i = Math.floor((x - hx) / bulbSpacing) + 29;
+          const phase = i * 0.55;
+          const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
+          const a = 0.16 + Math.pow(pulse, 6) * 0.84;
+          // Keep bottom bulbs inside the header so they never overlap curtains
+          const gx = x, gy = hy + hh - 4;
+          const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.0);
+          g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+          g.addColorStop(1, 'rgba(241,207,99,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+        }
+        // Left/right edges bulbs (sparser)
+        for (let y2 = hy + 10; y2 <= hy + hh - 10; y2 += bulbSpacing * 1.05) {
+          const i = Math.floor((y2 - hy) / bulbSpacing);
+          const phase = i * 0.6;
+          const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
+          const a = 0.12 + Math.pow(pulse, 6) * 0.78;
+          let gx1 = hx - 2, gy1 = y2; // keep within/near header frame
+          let g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, bulbR * 4.0);
+          g1.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+          g1.addColorStop(1, 'rgba(241,207,99,0)');
+          ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(gx1, gy1, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+          let gx2 = hx + hw + 2, gy2 = y2; // keep within/near header frame
+          let g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, bulbR * 4.0);
+          g2.addColorStop(0, `rgba(241,207,99,${Math.min(1,a*0.9)})`);
+          g2.addColorStop(1, 'rgba(241,207,99,0)');
+          ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(gx2, gy2, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+      })();
+
       // Entrance curtains per section: fully open at center, close as you walk away
       const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
       const boxX = screenX + 18; const boxW = sec.w - 36; // between the pillars
@@ -1449,11 +1526,10 @@
       // Instruction bubble if player is close — position just above the avatar's head
       const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
       if (d < 120) { // Show hint when near
-        // Player head in scene space -> convert to screen for DOM tooltip
-        const headSceneX = (player.x - camera.x) + 16;
-        const headSceneY = y - 58;
-        const tipSceneY = headSceneY - 24; // above head
-        const pt = sceneToScreen(headSceneX, tipSceneY);
+        // Anchor tooltip near the avatar's feet (runway level), so it hovers around the shoes
+        const footSceneX = (player.x - camera.x) + 16; // player center column
+        const footSceneY = y - 6; // just above the carpet baseline
+        const pt = sceneToScreen(footSceneX, footSceneY);
         showTooltip(Math.round(pt.x), Math.round(pt.y), 'Press Up or Enter to open');
       }
     }
