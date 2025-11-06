@@ -54,6 +54,11 @@
 
     /* Paparazzi toggle button (world-anchored near spawn) */
     #paparazziBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
+    #zoomSlider { position: fixed; z-index: 7; width: 90px; accent-color: var(--accent); }
+    #zoomSlider, #zoomSlider::-webkit-slider-runnable-track { height: 16px; }
+    #zoomSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); margin-top: -2px; }
+    #zoomSlider::-moz-range-track { height: 16px; }
+    #zoomSlider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); }
 
     /* Prevent text selection / callout on touch for on-screen controls and HUD */
     #controls, #controls button, #uiBar, #legend, #tooltip, canvas, .navBtn {
@@ -93,6 +98,7 @@
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
+  <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Zoom" />
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
       <header> <!-- Modal header with title and close action -->
@@ -591,6 +597,7 @@
     const btnDown  = document.getElementById('btnDown'); // Down/close button
     const btnEnter = document.getElementById('btnEnter'); // Enter action button
     const paparazziBtn = document.getElementById('paparazziBtn');
+    const zoomSlider = document.getElementById('zoomSlider');
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
     btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
@@ -612,12 +619,32 @@
       const sy = (world.runwayY() + 40) * s + ty; // slightly below avatar feet
       paparazziBtn.style.left = Math.round(sx) + 'px';
       paparazziBtn.style.top = Math.round(sy) + 'px';
+      if (zoomSlider) {
+        const zx = (SPAWN_X + 260 - camera.x + ox) * s + tx; // moved 25px further right
+        const zy = (world.runwayY() + 53) * s + ty; // moved 10px further down
+        zoomSlider.style.left = Math.round(zx) + 'px';
+        zoomSlider.style.top = Math.round(zy) + 'px';
+      }
     }
     if (paparazziBtn) {
       paparazziBtn.addEventListener('click', () => {
         window.paparazziOn = !window.paparazziOn;
         paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
         paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
+      });
+    }
+    if (zoomSlider) {
+      // Allow more zoom OUT from the current/default scale (approximately 2x prior range)
+      const base = Number(view && view.scale) || 1.5; // current default zoom
+      const minScale = Math.max(0.6, base - 0.6);     // ~40% zoom out (was ~20%), floor at 0.6
+      const maxScale = base;                          // still no zooming in beyond current
+      const valueToScale = (v) => minScale + (maxScale - minScale) * (v/100);
+      // Start at the current zoom (right edge of range)
+      zoomSlider.value = '100';
+      view.autoScale = false;
+      zoomSlider.addEventListener('input', () => {
+        const sc = valueToScale(Number(zoomSlider.value));
+        view.scale = Math.max(minScale, Math.min(maxScale, sc));
       });
     }
 
