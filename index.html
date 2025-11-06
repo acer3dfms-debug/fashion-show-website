@@ -236,6 +236,39 @@
     loadPaparazziPair('paparazzi_left.png', 'paparazzi_right.png');
     window.setPaparazziImages = (l, r) => loadPaparazziPair(l, r);
 
+    // AVATAR SPRITE SHEET (128x128 frames)
+    // Rows:
+    // 0: idle right (5 frames)
+    // 1: idle left  (5 frames)
+    // 2: walk right (11 frames)
+    // 3: walk left  (11 frames)
+    const AVATAR = {
+      img: new Image(),
+      ready: false,
+      fw: 128,
+      fh: 128,
+      // Number of source pixels from the bottom of the frame to the soles.
+      // Increase if feet appear to hover; decrease if they sink into the carpet.
+      footInset: 16, // nudged up from 10 to drop avatar slightly
+      // Overall size multiplier applied after viewport-based target height
+      sizeMul: 0.7, // 30% smaller
+      // Screen-space vertical nudge in pixels (positive moves sprite down)
+      yNudge: 10,
+      seq: {
+        idleRight: { row: 0, len: 5,  fps: 6 },
+        idleLeft:  { row: 1, len: 5,  fps: 6 },
+        walkRight: { row: 2, len: 11, fps: 12 },
+        walkLeft:  { row: 3, len: 11, fps: 12 },
+      }
+    };
+    AVATAR.img.onload = () => { AVATAR.ready = true; };
+    AVATAR.img.onerror = () => { AVATAR.ready = false; };
+    AVATAR.img.src = 'avatar_sprite_sheet.png';
+    // Quick tuning from console: setAvatarFootInset(px), setAvatarScale(mult), setAvatarYNudge(px)
+    window.setAvatarFootInset = (n) => { AVATAR.footInset = Math.max(0, Math.min(AVATAR.fh, Number(n)||0)); };
+    window.setAvatarScale = (m) => { AVATAR.sizeMul = Math.max(0.5, Math.min(2, Number(m)||1)); };
+    window.setAvatarYNudge = (n) => { AVATAR.yNudge = Math.max(-200, Math.min(200, Number(n)||0)); };
+
     // Draw alternating paparazzi tiles under the runway
     function drawPaparazziStrip() {
       if (!(paparazziLeftReady || paparazziRightReady)) return;
@@ -414,13 +447,89 @@
 
       // Center on the spawn X in world space
       const dx = Math.floor(((SPAWN_X + BRAND_OFFSET_X) - camera.x) - dw / 2);
-      const dy = Math.floor(carpetTop - padAboveCarpet - dh);
+      // Move branding up by an additional 50px (now total 95px up from original)
+      const dy = Math.floor(carpetTop - padAboveCarpet - dh - 95);
 
       ctx.save();
+      // Draw two gold poles holding up the branding, like a billboard
+      const gold = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge') || '#f1cf63';
+      ctx.fillStyle = gold;
+      const poleWidth = 20; // reduce to ~1/3 thickness
+      const poleInset = 12; // base inset from image edges
+      const extraInset = 30; // move posts inward toward center by 30px
+      const poleTop = dy + dh; // start at bottom of image
+      const poleBottom = carpetTop - 2; // stop slightly above carpet
+      const leftPoleX = dx + poleInset + extraInset;
+      const rightPoleX = dx + dw - poleInset - poleWidth - extraInset;
+      if (poleBottom > poleTop) {
+        ctx.fillRect(leftPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        ctx.fillRect(rightPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        // small round base caps
+        ctx.beginPath(); ctx.arc(leftPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rightPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+      }
       // very soft shadow so it sits on the wall behind
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 8;
       ctx.drawImage(brandingImg, dx, dy, dw, dh);
+
+      // Golden outline around the branding
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = gold;
+      ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
+
+      // Small flashing golden light pattern around the brand png
+      const t = performance.now() * 0.001;
+      const bulbSpacing = 22;
+      const bulbR = 3;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      // Top edge bulbs
+      for (let x = dx; x <= dx + dw; x += bulbSpacing) {
+        const i = Math.floor((x - dx) / bulbSpacing);
+        const phase = i * 0.6;
+        const pulse = Math.max(0, Math.sin(t * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82; // sharp bright pops
+        const gx = x, gy = dy - 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      // Bottom edge bulbs
+      for (let x = dx + bulbSpacing/2; x <= dx + dw; x += bulbSpacing) {
+        const i = Math.floor((x - dx) / bulbSpacing) + 37;
+        const phase = i * 0.6;
+        const pulse = Math.max(0, Math.sin(t * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82;
+        const gx = x, gy = dy + dh + 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      // Left/right edges bulbs (sparser)
+      for (let y = dy + 12; y <= dy + dh - 12; y += bulbSpacing * 1.1) {
+        const i = Math.floor((y - dy) / bulbSpacing);
+        const phase = i * 0.7;
+        const pulse = Math.max(0, Math.sin(t * 3.0 + phase));
+        const a = 0.12 + Math.pow(pulse, 6) * 0.75;
+        const gx1 = dx - 6, gy1 = y;
+        const g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, bulbR * 4.2);
+        g1.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g1.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(gx1, gy1, bulbR * 3.8, 0, Math.PI*2); ctx.fill();
+        const gx2 = dx + dw + 6, gy2 = y;
+        const g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, bulbR * 4.2);
+        g2.addColorStop(0, `rgba(241,207,99,${Math.min(1,a*0.9)})`);
+        g2.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(gx2, gy2, bulbR * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+
       // store clickable rect for spawn branding
       view._spawnBrandRect = { x: dx, y: dy, w: dw, h: dh };
       ctx.restore();
@@ -437,11 +546,81 @@
       const dw = Math.floor(brandingImg.naturalWidth * scale);
       const dh = Math.floor(brandingImg.naturalHeight * scale);
       const dx = Math.floor((endX - camera.x) - dw / 2);
-      const dy = Math.floor(carpetTop - padAboveCarpet - dh);
+      // Move branding up by an additional 50px (now total 95px up from original)
+      const dy = Math.floor(carpetTop - padAboveCarpet - dh - 95);
       ctx.save();
+      // Draw two gold poles for endcap branding as well
+      const gold = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge') || '#f1cf63';
+      ctx.fillStyle = gold;
+      const poleWidth = 20; // reduce to ~1/3 thickness
+      const poleInset = 12;
+      const extraInset = 30; // move posts inward toward center by 30px
+      const poleTop = dy + dh;
+      const poleBottom = carpetTop - 2;
+      const leftPoleX = dx + poleInset + extraInset;
+      const rightPoleX = dx + dw - poleInset - poleWidth - extraInset;
+      if (poleBottom > poleTop) {
+        ctx.fillRect(leftPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        ctx.fillRect(rightPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        ctx.beginPath(); ctx.arc(leftPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rightPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+      }
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 8;
       ctx.drawImage(brandingImg, dx, dy, dw, dh);
+
+      // Golden outline
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = gold;
+      ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
+
+      // Flashing golden bulbs around frame
+      const t2 = performance.now() * 0.001;
+      const bulbSpacing2 = 22;
+      const bulbR2 = 3;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (let x = dx; x <= dx + dw; x += bulbSpacing2) {
+        const i = Math.floor((x - dx) / bulbSpacing2);
+        const phase = i * 0.6 + 0.3; // slight offset so endcap differs
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82;
+        const gx = x, gy = dy - 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR2 * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      for (let x = dx + bulbSpacing2/2; x <= dx + dw; x += bulbSpacing2) {
+        const i = Math.floor((x - dx) / bulbSpacing2) + 41;
+        const phase = i * 0.6 + 0.3;
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82;
+        const gx = x, gy = dy + dh + 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR2 * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      for (let y = dy + 12; y <= dy + dh - 12; y += bulbSpacing2 * 1.1) {
+        const i = Math.floor((y - dy) / bulbSpacing2);
+        const phase = i * 0.7 + 0.3;
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.12 + Math.pow(pulse, 6) * 0.75;
+        const gx1 = dx - 6, gy1 = y;
+        const g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, bulbR2 * 4.2);
+        g1.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g1.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(gx1, gy1, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+        const gx2 = dx + dw + 6, gy2 = y;
+        const g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, bulbR2 * 4.2);
+        g2.addColorStop(0, `rgba(241,207,99,${Math.min(1,a*0.9)})`);
+        g2.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(gx2, gy2, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+
       // store clickable rect for endcap branding
       view._endcapBrandRect = { x: dx, y: dy, w: dw, h: dh };
       ctx.restore();
@@ -461,6 +640,7 @@
     const player = {
       x: SPAWN_X, y: 0, vy: 0, facing: 1, walking: false, t: 0, // position, velocity, facing, walk state, walk time
       width: 32, height: 64, // player dimensions for drawing/placement
+      anim: { key: 'idleRight', frame: 0, accum: 0 }, // sprite animation state
     };
 
     // CAMERA
@@ -1279,7 +1459,7 @@
     }
     
 
-    function drawPlayer() { // Blocky/voxel-like character with normal gait
+    function drawPlayer() { // Avatar (sprite sheet if available; fallback to blocky)
       const baseY = world.runwayY();                // Ground baseline (runway level)
       const px = player.x - camera.x;               // Player X on screen
       const facing = player.facing || 1;            // 1 or -1
@@ -1289,6 +1469,37 @@
       ctx.beginPath();
       ctx.ellipse(px + 16, baseY + 10, 22, 6, 0, 0, Math.PI*2);
       ctx.fill();
+
+      // Prefer sprite sheet rendering when available
+      if (AVATAR && AVATAR.ready) {
+        const seq = AVATAR.seq[player.anim && player.anim.key] || AVATAR.seq.idleRight;
+        const frame = (player.anim && Number.isFinite(player.anim.frame)) ? (player.anim.frame % seq.len) : 0;
+        const sx = frame * AVATAR.fw;
+        const sy = seq.row * AVATAR.fh;
+
+        // Scale sprite relative to viewport so the figure reads well on all screens
+        const isSmallScreen = (vw < 900) || (vh < 600);
+        const targetHBase = Math.max(80, Math.min(160, Math.floor(vh * 0.26)));
+        const targetH = isSmallScreen ? Math.floor(targetHBase * 1.05) : targetHBase;
+        const targetHScaled = Math.floor(targetH * (AVATAR.sizeMul || 1));
+        const scale = targetHScaled / AVATAR.fh;
+        const dw = Math.floor(AVATAR.fw * scale);
+        const dh = Math.floor(AVATAR.fh * scale);
+
+        // Center on player column; anchor feet to carpet
+        const dx = Math.floor(px + 16 - dw / 2);
+        // Anchor the soles to the carpet using footInset pixels from bottom of source frame
+        let dy = Math.floor(baseY - (dh - Math.floor((AVATAR.footInset||0) * scale)));
+        // Apply screen-space nudge to push the sprite down/up relative to the carpet
+        dy += Math.floor(AVATAR.yNudge || 0);
+
+        // Draw with crisp pixels if the art is low-res
+        const prevSmooth = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(AVATAR.img, sx, sy, AVATAR.fw, AVATAR.fh, dx, dy, dw, dh);
+        ctx.imageSmoothingEnabled = prevSmooth;
+        return; // sprite drawn; skip fallback
+      }
 
       // Walk cycle params
       const cadence = 5.2;                          // steps per second-ish
@@ -1507,6 +1718,20 @@
       if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
       player.x = Math.max(0, Math.min(world.width, player.x)); // Clamp player within world bounds
       if (player.walking) player.t += dt * (keys.run ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running (doubled)
+
+      // Update avatar sprite animation (idle/walk + facing)
+      if (!player.anim) player.anim = { key: 'idleRight', frame: 0, accum: 0 };
+      const prevKey = player.anim.key;
+      let nextKey;
+      if (player.walking) {
+        nextKey = (player.facing === 1) ? 'walkRight' : 'walkLeft';
+      } else {
+        nextKey = (player.facing === 1) ? 'idleRight' : 'idleLeft';
+      }
+      if (nextKey !== prevKey) { player.anim.key = nextKey; player.anim.accum = 0; player.anim.frame = 0; }
+      const seq = (AVATAR && AVATAR.seq[player.anim.key]) ? AVATAR.seq[player.anim.key] : { len: 1, fps: 1 };
+      player.anim.accum += dt * seq.fps;
+      player.anim.frame = Math.floor(player.anim.accum) % seq.len;
 
       // camera follows with smoothing, while keeping player on-screen with margins
       const baseTarget = player.x - vw * 0.4; // original follow bias
