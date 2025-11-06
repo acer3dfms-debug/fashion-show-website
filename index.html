@@ -1080,8 +1080,8 @@
       // Taller curtains only on mobile landscape so header text is covered there,
       // but keep desktop browsers at the original height.
       const isMobileLandscape = (vw > vh) && IS_TOUCH;
-      // Make curtains reach slightly past the carpet edge so they never feel too short at high zoom
-      const curtainBottomY = Math.ceil(world.runwayY() + 6); // extend a few px below carpet top
+      // Keep curtains above the red carpet (stop right at carpet top)
+      const curtainBottomY = Math.floor(world.runwayY() - 2);
       const boxTop = headerBottom; // attach directly to header bottom regardless of zoom
       const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
 
