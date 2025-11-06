@@ -41,6 +41,7 @@
     .navBtn:hover { background: rgba(255,255,255,0.18); } /* Hover state */
     #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
+    #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(10px, -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
     #modal { width: min(720px, 92vw); max-height: 80vh; overflow: auto; background: #121219; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); } /* Modal panel */
     #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; } /* Sticky modal header */
@@ -50,6 +51,9 @@
     /* Mobile controls (optional) */
     #controls { position: fixed; right: 12px; bottom: 12px; display: grid; gap: 8px; z-index: 6; } /* Docked control cluster */
     #controls button { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 12px; font-size: 14px; padding: 10px 12px; min-width: 44px; backdrop-filter: blur(6px); } /* Tappable buttons */
+
+    /* Paparazzi toggle button (world-anchored near spawn) */
+    #paparazziBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
 
     /* Prevent text selection / callout on touch for on-screen controls and HUD */
     #controls, #controls button, #uiBar, #legend, #tooltip, canvas, .navBtn {
@@ -87,6 +91,8 @@
   </div>
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
+  <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
+  <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
       <header> <!-- Modal header with title and close action -->
@@ -134,11 +140,15 @@
     const canvas = document.getElementById('stage'); // Grab the canvas element
     const ctx = canvas.getContext('2d'); // 2D drawing context for canvas
 
-    const DPR = Math.min(2, window.devicePixelRatio || 1); // Device pixel ratio (capped at 2 for perf)
+    // High-DPI handling: recompute DPR on every resize/zoom for crisp rendering
+    let DPR = window.devicePixelRatio || 1; // Will be updated inside resize()
+    const DPR_CAP = 3; // cap for performance; increase if you want extra sharpness
     let vw = window.innerWidth, vh = window.innerHeight; // Current viewport width/height in CSS pixels
     let marbleTex = null; // Offscreen canvas for full-screen marble texture
     let brandingImg = null; // Branding image (drawn on the main curtain)
     let brandingReady = false; // Loaded flag
+    let doorBackdropImg = null; // Image shown behind door curtains when they open
+    let doorBackdropReady = false; // Loaded flag for door backdrop
 
     // Helper to choose a reasonable zoom for small screens
     function autoScaleForWidth(width) {
@@ -149,13 +159,17 @@
       return s;
     }
 
-    function resize() { // Resize handler to keep canvas in sync with window
+    function resize() { // Resize handler to keep canvas in sync with window (and zoom)
       vw = window.innerWidth; vh = window.innerHeight; // Update viewport size
+      // Update DPR on every resize/zoom so the backing store stays crisp
+      DPR = Math.min(DPR_CAP, window.devicePixelRatio || 1);
       canvas.width = Math.floor(vw * DPR); // Set canvas backing width in device pixels
       canvas.height = Math.floor(vh * DPR); // Set canvas backing height in device pixels
       canvas.style.width = vw + 'px'; // Match CSS size
       canvas.style.height = vh + 'px'; // Match CSS size
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0); // Scale drawing so 1 unit = 1 CSS pixel
+      // Prefer crisp rendering for raster steps
+      if ('imageSmoothingEnabled' in ctx) ctx.imageSmoothingEnabled = false;
       // Responsive zoom: on small screens, step back the camera a bit (use window.view to avoid TDZ)
       if (window.view && window.view.autoScale) {
         window.view.scale = autoScaleForWidth(vw);
@@ -186,6 +200,18 @@
     // Expose a setter for quick swaps via console if needed
     window.setBrandingImage = (url) => loadBranding(url);
 
+    // Load per-door backdrop image (displayed behind opening curtains)
+    function loadDoorBackdrop(src) {
+      doorBackdropReady = false;
+      doorBackdropImg = new Image();
+      doorBackdropImg.onload = () => { doorBackdropReady = true; };
+      doorBackdropImg.onerror = () => { doorBackdropReady = false; };
+      doorBackdropImg.src = src;
+    }
+    // Default filename expected alongside index.html; safe to replace at runtime
+    loadDoorBackdrop('door-backdrop.png');
+    window.setDoorBackdropImage = (url) => loadDoorBackdrop(url);
+
     // Build a subtle marble texture as a repeated pattern
     function buildMarblePattern() {
       const cw = Math.max(1, Math.floor(vw));
@@ -206,7 +232,7 @@
         const y = Math.random()*ch;
         const r = diag * (0.10 + Math.random()*0.18);
         const g = c.createRadialGradient(x,y,0,x,y,r);
-        g.addColorStop(0, 'rgba(255,255,255,0.07)');
+        g.addColorStop(0, 'rgba(255,255,255,0.10)');
         g.addColorStop(1, 'rgba(255,255,255,0)');
         c.fillStyle = g;
         c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
@@ -217,7 +243,7 @@
       for (let i = 0; i < warmCount; i++) {
         const x = Math.random()*cw, y = Math.random()*ch, r = diag * (0.10 + Math.random()*0.14);
         const tintWarm = c.createRadialGradient(x,y,0,x,y,r);
-        tintWarm.addColorStop(0, 'rgba(180,160,140,0.03)');
+        tintWarm.addColorStop(0, 'rgba(180,160,140,0.05)');
         tintWarm.addColorStop(1, 'rgba(180,160,140,0)');
         c.fillStyle = tintWarm; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
       }
@@ -225,12 +251,12 @@
       for (let i = 0; i < coolCount; i++) {
         const x = Math.random()*cw, y = Math.random()*ch, r = diag * (0.10 + Math.random()*0.14);
         const tintCool = c.createRadialGradient(x,y,0,x,y,r);
-        tintCool.addColorStop(0, 'rgba(140,160,180,0.03)');
+        tintCool.addColorStop(0, 'rgba(140,160,180,0.05)');
         tintCool.addColorStop(1, 'rgba(140,160,180,0)');
         c.fillStyle = tintCool; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
       }
 
-      // faint veins
+      // faint veins: subtle criss-cross lines for marble texture
       c.lineCap = 'round';
       const veinCount = Math.max(14, Math.floor(area / 220000));
       for (let i = 0; i < veinCount; i++) {
@@ -262,8 +288,8 @@
       }
       c.shadowBlur = 0;
 
-      // speckles scale with area
-      const speckCount = Math.floor(area / 2500);
+      // speckles (disabled for a cleaner background)
+      const speckCount = 0;
       for (let i = 0; i < speckCount; i++) {
         const x = Math.random()*cw;
         const y = Math.random()*ch;
@@ -295,6 +321,8 @@
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 8;
       ctx.drawImage(brandingImg, dx, dy, dw, dh);
+      // store clickable rect for spawn branding
+      view._spawnBrandRect = { x: dx, y: dy, w: dw, h: dh };
       ctx.restore();
     }
     // Draw a second stationary branding at the far right endcap (after last door)
@@ -314,6 +342,8 @@
       ctx.shadowColor = 'rgba(0,0,0,0.25)';
       ctx.shadowBlur = 8;
       ctx.drawImage(brandingImg, dx, dy, dw, dh);
+      // store clickable rect for endcap branding
+      view._endcapBrandRect = { x: dx, y: dy, w: dw, h: dh };
       ctx.restore();
     }
 
@@ -339,6 +369,8 @@
     const view = { scale: 1.5, offsetX: 0, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
     // Expose quick tuning via console: setViewScale(1.2..1.6)
     window.view = view;
+    // Paparazzi toggle (global)
+    window.paparazziOn = true;
     window.setViewScale = (s) => { view.autoScale = false; view.scale = Math.max(1, Math.min(2, Number(s)||1)); };
     // Optional: adjust horizontal nudge via console: setViewOffset(px)
     window.setViewOffset = (x) => { view.offsetX = Math.max(-200, Math.min(200, Number(x)||0)); };
@@ -354,6 +386,8 @@
     const CURTAIN_LIFT = 30;
     // Branding horizontal offset relative to spawn (move image to the right)
     const BRAND_OFFSET_X = 280;
+    // Ensure the avatar spawns centered on the branding image
+    try { player.x = SPAWN_X + BRAND_OFFSET_X; } catch (_) {}
     // Ensure sizing applies with the now-defined view
     try { resize(); } catch (_) {}
 
@@ -369,22 +403,53 @@
     // Define sections used by the seven doors (final content)
     sections = [
       // Quick Sign-Up door near spawn (to the left)
-      { x: -585, w: 320, key: 'signup', title: 'Artist Quick Sign-Up', content: `
-        <p>Jump in fast. Open the raffle form to throw your name in and get the theme when slots are drawn.</p>
+      { x: -615, w: 340, key: 'signup', title: 'Artist Quick Sign-Up', content: `
+        <p>Show your style on the runway. Enter the raffle to become a featured artist for an upcoming monthly show.</p>
+        <h4>What you’ll make</h4>
+        <ul>
+          <li>Full VoxEdit gear set: Headpiece, Chest, Arms, Legs</li>
+          <li>Optional: Main-hand and Off-hand equipment</li>
+          <li>Original, show-safe voxel work created in VoxEdit</li>
+        </ul>
+        <h4>How selection works</h4>
+        <ul>
+          <li>New artists enter the primary raffle</li>
+          <li>If slots remain, past artists enter a secondary raffle</li>
+          <li>After draws, we announce the theme and the deadline</li>
+        </ul>
+        <h4>Timeline</h4>
+        <ul>
+          <li>Theme drop → ~3 weeks to finish your gear set</li>
+          <li>Submit 3–5 hero images, a short description, and your display name/socials</li>
+          <li>Quick tech check before showtime</li>
+        </ul>
+        <h4>Ready checklist</h4>
+        <ul>
+          <li>&#9633; VoxEdit installed</li>
+          <li>&#9633; Time for ~3 weeks of build/polish</li>
+        </ul>
+        <p><strong>Need help?</strong> Join Discord for Q&amp;A, feedback, and tech checks.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Open Artist Raffle Form</a>
+          <a class="navBtn" href="https://www.sandbox.game/en/create/vox-edit/" target="_blank" rel="noopener">Download VoxEdit</a>
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
           <a class="navBtn" href="#" data-close>Back to Runway</a>
         </div>
       `},
       // Door 1 — About This Website
-      { x: 400, w: 320, key: 'about', title: 'The Fashion Show Website', content: `
-        <p>Step onto the stage. Use the arrow keys (or on-screen arrows) to walk left and right.</p>
-        <p>Stop under any door and press Enter to open a short popup about the show.</p>
-        <p>There are seven doors. Start anywhere, finish anywhere.</p>
+      { x: 400, w: 360, key: 'about', title: 'The Fashion Show Website', content: `
+        <p>Step onto the stage. Walk the runway and stop under a door to open a short popup about the show.</p>
+        <h4>Controls</h4>
+        <ul>
+          <li><strong>Move:</strong> &larr; / &rarr; or A / D, or use the on-screen arrows</li>
+          <li><strong>Open a door:</strong> Enter or &uarr; / W, or tap the on-screen Enter</li>
+          <li><strong>Close a popup:</strong> Esc or &darr; / S, click outside the popup, or tap the X</li>
+        </ul>
         <h4>Quick tips</h4>
         <ul>
-          <li>Works on desktop and mobile</li>
-          <li>Modern browsers: Chrome, Edge, Safari, Firefox</li>
+          <li>Works on desktop and mobile (best in Chrome/Edge/Safari/Firefox)</li>
+          <li>If keys don’t respond, click the page once to give it focus</li>
+          <li>If layout looks off, rotate your device or hard refresh (Ctrl/Cmd + Shift + R)</li>
         </ul>
         <div class="ctaRow">
           <a class="navBtn" href="#" data-close>Start Walking</a>
@@ -509,7 +574,7 @@
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
       if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
       if (k === 'Enter' || k === 'ArrowUp' || k === 'w' || k === 'W') { tryOpen(); e.preventDefault(); }
-      if (k === 'ArrowDown' || k === 's' || k === 'S') { closeModal(); e.preventDefault(); }
+      if (k === 'ArrowDown' || k === 's' || k === 'S' || k === 'Escape' || k === 'Esc') { closeModal(); e.preventDefault(); }
       if (k === 'Shift') { keys.run = true; }
     });
     window.addEventListener('keyup', e => { // Stop walking when keys released
@@ -525,6 +590,7 @@
     const btnUp    = document.getElementById('btnUp'); // Up/open button
     const btnDown  = document.getElementById('btnDown'); // Down/close button
     const btnEnter = document.getElementById('btnEnter'); // Enter action button
+    const paparazziBtn = document.getElementById('paparazziBtn');
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
     btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
@@ -535,7 +601,78 @@
     btnUp.addEventListener('click', () => tryOpen()); // Tap up to open
     btnDown.addEventListener('click', () => closeModal()); // Tap down to close
     btnEnter.addEventListener('click', () => tryOpen()); // Tap to open
+    function updatePaparazziBtnPosition() {
+      if (!paparazziBtn) return;
+      const s = Number(view && view.scale) || 1;
+      const tx = Number(view && view._tx) || 0;
+      const ty = Number(view && view._ty) || 0;
+      const ox = Number(view && view.offsetX) || 0;
+      // Place 120px to the right of the spawn avatar and 40px below the runway baseline
+      const sx = (SPAWN_X + 120 - camera.x + ox) * s + tx;
+      const sy = (world.runwayY() + 40) * s + ty; // slightly below avatar feet
+      paparazziBtn.style.left = Math.round(sx) + 'px';
+      paparazziBtn.style.top = Math.round(sy) + 'px';
+    }
+    if (paparazziBtn) {
+      paparazziBtn.addEventListener('click', () => {
+        window.paparazziOn = !window.paparazziOn;
+        paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
+        paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
+      });
+    }
 
+    // CLICKABLE DOOR HEADERS (open by clicking the marquee header)
+    function screenToScene(x, y) {
+      const s = Number(view && view.scale) || 1;
+      const tx = Number(view && view._tx) || 0;
+      const ty = Number(view && view._ty) || 0;
+      const ox = Number(view && view.offsetX) || 0;
+      return { x: (x - tx) / s - ox, y: (y - ty) / s };
+    }
+    function sectionHeaderAt(sceneX, sceneY) {
+      const y = world.runwayY();
+      const headerTop = y - 220;
+      const headerBottom = y - 140;
+      for (const sec of sections) {
+        const screenX = (stage.leftOffset + sec.x) - camera.x;
+        const x1 = screenX + 18;
+        const x2 = x1 + (sec.w - 36);
+        const y1 = headerTop;
+        const y2 = headerBottom;
+        if (sceneX >= x1 && sceneX <= x2 && sceneY >= y1 && sceneY <= y2) return sec;
+      }
+      return null;
+    }
+    canvas.addEventListener('click', (e) => {
+      if (modalWrap && modalWrap.style.display === 'grid') return; // ignore when modal open
+      const pt = screenToScene(e.offsetX, e.offsetY);
+      // If clicking the branding at spawn or endcap, open the external experience page
+      const r1 = view._spawnBrandRect, r2 = view._endcapBrandRect;
+      const inRect = (r) => r && pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
+      if (inRect(r1) || inRect(r2)) {
+        window.open('https://www.sandbox.game/en/experiences/The%20Sandbox%20-%20Fashion%20Show/e157abb3-bda0-44c5-a769-8f797f1ebbd4/page/', '_blank', 'noopener');
+        return;
+      }
+      const sec = sectionHeaderAt(pt.x, pt.y);
+      if (sec) { openModal(sec.title, sec.content); }
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      const pt = screenToScene(e.offsetX, e.offsetY);
+      const r1 = view._spawnBrandRect, r2 = view._endcapBrandRect;
+      const inRect = (r) => r && pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
+      const sec = sectionHeaderAt(pt.x, pt.y);
+      const overBrand = inRect(r1) || inRect(r2);
+      const overHeader = !!sec;
+      const hover = overBrand || overHeader;
+      canvas.style.cursor = hover ? 'pointer' : 'default';
+      if (hover) {
+        const text = overBrand ? 'Fashion Show Experience Page' : 'Open “' + sec.title + '”';
+        showHoverTip(e.clientX, e.clientY, text);
+      } else {
+        hideHoverTip();
+      }
+    });
+    canvas.addEventListener('mouseleave', () => hideHoverTip());
     // MODAL
     const modalWrap = document.getElementById('modalWrap'); // Overlay element
     const modalTitle = document.getElementById('modalTitle'); // Title node inside modal
@@ -669,6 +806,17 @@
     }
     function hideTooltip() { tooltip.style.display = 'none'; } // Hide tooltip
 
+    // Hover tip near pointer for clickable areas (headers/branding)
+    const hoverTipEl = document.getElementById('hoverTip');
+    function showHoverTip(scrX, scrY, text) {
+      if (!hoverTipEl) return;
+      hoverTipEl.textContent = text;
+      hoverTipEl.style.left = scrX + 'px';
+      hoverTipEl.style.top = scrY + 'px';
+      hoverTipEl.style.display = 'block';
+    }
+    function hideHoverTip() { if (hoverTipEl) hoverTipEl.style.display = 'none'; }
+
     // OPEN section when near
     function tryOpen() { // Attempts to open the nearest section if close
       const near = nearestSection(); // Find nearest
@@ -748,15 +896,8 @@
       ctx.closePath();
       ctx.clip();
 
-      // Draw alternating dark/light thin stripes with low alpha
-      for (let x = 8; x < vw; x += 22) {
-        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 2, topH + 10); ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x + 7, 0); ctx.lineTo(x + 5, topH + 10); ctx.stroke();
-      }
+      // Stripes disabled to avoid shimmer/flicker on movement
+      // (Keep the rich gradient valance without overlay lines.)
       ctx.restore();
 
       // Side curtains
@@ -887,11 +1028,13 @@
       ctx.fillRect(screenX, y - 220, 18, 220); // Left pillar
       ctx.fillRect(screenX + sec.w - 18, y - 220, 18, 220); // Right pillar
       // Header light box (top panel)
-      const grd = ctx.createLinearGradient(0, y - 220, 0, y - 140); // Vertical gradient
+      const headerTop = y - 220;
+      const headerBottom = y - 140;
+      const grd = ctx.createLinearGradient(0, headerTop, 0, headerBottom); // Vertical gradient
       grd.addColorStop(0, '#3a3a4a');
       grd.addColorStop(1, '#1c1c26');
       ctx.fillStyle = grd;
-      ctx.fillRect(screenX + 18, y - 220, sec.w - 36, 80); // Panel between pillars
+      ctx.fillRect(screenX + 18, headerTop, sec.w - 36, 80); // Panel between pillars
       // Title text in the header
       ctx.fillStyle = '#ffffff';
       ctx.font = '700 16px system-ui'; // Bold 16px
@@ -901,7 +1044,7 @@
       // Accent underglow strip
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
       ctx.globalAlpha = 0.4; // Semi transparent
-      ctx.fillRect(screenX + 20, y - 138, sec.w - 40, 4); // Thin bar under header
+      ctx.fillRect(screenX + 20, headerBottom + 2, sec.w - 40, 4); // Thin bar under header
       ctx.globalAlpha = 1; // Restore alpha
 
       // Entrance curtains per section: fully open at center, close as you walk away
@@ -910,14 +1053,33 @@
       // Taller curtains only on mobile landscape so header text is covered there,
       // but keep desktop browsers at the original height.
       const isMobileLandscape = (vw > vh) && IS_TOUCH;
-      const topValanceH = isMobileLandscape
-        ? Math.max(0, world.runwayY() - 260)
-        : Math.max(60, world.runwayY() - 220);
-      const curtainBottomY = world.runwayY() - 2; // stop at the top of the red carpet
-      const boxTop = topValanceH; const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
+      // Make curtains reach slightly past the carpet edge so they never feel too short at high zoom
+      const curtainBottomY = Math.ceil(world.runwayY() + 6); // extend a few px below carpet top
+      const boxTop = headerBottom; // attach directly to header bottom regardless of zoom
+      const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
+
+      // Backdrop image behind the curtains (visible through the opening)
+      if (doorBackdropReady && doorBackdropImg && doorBackdropImg.naturalWidth) {
+        ctx.save();
+        // Clip to the area between pillars and below the header
+        ctx.beginPath();
+        ctx.rect(boxX, boxTop, boxW, boxH);
+        ctx.clip();
+        // Cover-fit the image within the box, preserving aspect ratio
+        const iw = doorBackdropImg.naturalWidth;
+        const ih = doorBackdropImg.naturalHeight;
+        const scale = Math.max(boxW / iw, boxH / ih);
+        const dw = Math.ceil(iw * scale);
+        const dh = Math.ceil(ih * scale);
+        const dx = Math.floor(boxX + (boxW - dw) / 2);
+        const dy = Math.floor(boxTop + (boxH - dh) / 2);
+        ctx.drawImage(doorBackdropImg, dx, dy, dw, dh);
+        ctx.restore();
+      }
       const centerXWorld = stage.leftOffset + sec.x + sec.w/2; // world center with stage offset
       const dist = Math.abs(player.x - centerXWorld); // distance from player to center
-      const radius = 180; // distance at which curtains fully closed
+      // Scale opening radius with zoom so curtains don't open too early when zoomed in
+      const radius = 220 * Math.max(1, Number(view && view.scale) || 1); // distance at which curtains fully closed
       const open = Math.max(0, Math.min(1, 1 - dist / radius)); // 0..1
       const minCurtain = 10; // min width of each curtain when fully open
       const overlap = 6; // small overlap so no sliver shows through
@@ -939,10 +1101,23 @@
       ctx.fillStyle = redR;
       ctx.fillRect(rightLeft, boxTop, Math.max(minCurtain, boxX + boxW - rightLeft), boxH);
 
-      // Fold lines for texture
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
-      for (let x = boxX + 8; x < leftRight; x += 14) { ctx.beginPath(); ctx.moveTo(x, boxTop); ctx.lineTo(x - 3, boxTop + boxH); ctx.stroke(); }
-      for (let x = rightLeft + 4; x < boxX + boxW - 4; x += 14) { ctx.beginPath(); ctx.moveTo(x, boxTop); ctx.lineTo(x + 3, boxTop + boxH); ctx.stroke(); }
+      // Fold lines for gentle curtain texture (aligned to half-pixels to avoid flicker)
+      (function drawFoldLines(){
+        const y1 = Math.round(boxTop) + 0.5;
+        const y2 = Math.round(boxTop + boxH) + 0.5;
+        ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+        ctx.lineWidth = 1;
+        for (let x = Math.ceil(boxX + 8); x < leftRight; x += 14) {
+          const x1 = Math.round(x) + 0.5;
+          const x2 = Math.round(x - 3) + 0.5;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+        for (let x = Math.ceil(rightLeft + 4); x < boxX + boxW - 4; x += 14) {
+          const x1 = Math.round(x) + 0.5;
+          const x2 = Math.round(x + 3) + 0.5;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+      })();
 
       // (Removed gold tiebacks to avoid visual confusion)
       // Instruction bubble if player is close — position just above the avatar's head
@@ -1154,17 +1329,18 @@
           // occasional flash
           const period = 2.5 + rnd(seed + 4) * 2.0;        // 2.5..4.5s
           const phase = (t + rnd(seed + 5) * period) % period;
-          if (phase < 0.15) {
+          // paparazzi flash (softened)
+          if (phase < 0.12) {
             const fx = faceRight ? (camX + camW) : camX;
             const fy = camY + camH / 2;
             const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, rx);
-            g.addColorStop(0, 'rgba(255,255,220,0.25)');
+            g.addColorStop(0, 'rgba(255,255,220,0.18)');
             g.addColorStop(1, 'rgba(255,255,220,0)');
             ctx.fillStyle = g;
             ctx.beginPath(); ctx.arc(fx, fy, rx, 0, Math.PI * 2); ctx.fill();
             // bright sparkle
-            ctx.fillStyle = 'rgba(255,250,200,0.9)';
-            ctx.beginPath(); ctx.arc(fx, fy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255,250,200,0.6)';
+            ctx.beginPath(); ctx.arc(fx, fy, 4, 0, Math.PI * 2); ctx.fill();
           }
           ctx.restore();
         }
@@ -1217,6 +1393,7 @@
       // When zoomed out (s < 1), clamping ty avoids a blank gray bar at the very top
       const tyRaw = yAnchor * (1 - s);
       const ty = Math.min(0, tyRaw);
+      view._tx = tx; view._ty = ty; // expose current transform for input mapping
       ctx.setTransform(DPR * s, 0, 0, DPR * s, DPR * tx, DPR * ty);
       // Optional extra nudge (not used by default; stage.leftOffset handles layout)
       if (view.offsetX) ctx.translate(view.offsetX, 0);
@@ -1227,17 +1404,18 @@
       ctx.fillRect(0, 0, vw, vh);
       if (marbleTex) {
         ctx.save();
-        ctx.globalAlpha = 0.4; // subtle overlay
+        ctx.globalAlpha = 0.55; // slightly stronger to keep marble visible
         ctx.drawImage(marbleTex, 0, 0, vw, vh); // single, seamless texture
         ctx.restore();
       }
 
-      drawBackgroundParallax(); // Distant audience dots
+      // drawBackgroundParallax(); // Disabled to remove tiny background speckle dots
       drawCurtains();           // Big red curtains framing the stage
       drawSpotlights();         // Moving soft lights (in front of curtains)
       drawSpawnBranding();      // Branding at spawn, stays put as you walk away
       drawEndcapBranding(ENDCAP_X); // Second branding after last door for a visual endcap
       drawRunway();             // Ground and runway
+      try { updatePaparazziBtnPosition(); } catch (_) {}
 
       // sections
       hideTooltip(); // Hide tooltip before possibly showing it for a nearby section
@@ -1247,7 +1425,7 @@
         drawMarquee(sec); // Draw this marquee
       }
       
-      drawPaparazziForeground(); // Foreground silhouettes and flashes (behind player)
+      if (window.paparazziOn !== false) drawPaparazziForeground(); // Foreground silhouettes and flashes (behind player)
       drawPlayer(); // Draw the model/figure
 
       // edge fades to soften edges (disabled by default to avoid visible side bands)
