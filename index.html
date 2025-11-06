@@ -375,6 +375,7 @@
     const view = { scale: 1.5, offsetX: 0, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
     // Expose quick tuning via console: setViewScale(1.2..1.6)
     window.view = view;
+    if (view.baseScale == null) view.baseScale = view.scale; // store base scale
     // Paparazzi toggle (global)
     window.paparazziOn = true;
     window.setViewScale = (s) => { view.autoScale = false; view.scale = Math.max(1, Math.min(2, Number(s)||1)); };
@@ -638,6 +639,8 @@
       const base = Number(view && view.scale) || 1.5; // current default zoom
       const minScale = Math.max(0.6, base - 0.6);     // ~40% zoom out (was ~20%), floor at 0.6
       const maxScale = base;                          // still no zooming in beyond current
+      window.zoomMinScale = minScale;                 // expose for render math
+      if (view && view.baseScale == null) view.baseScale = maxScale;
       const valueToScale = (v) => minScale + (maxScale - minScale) * (v/100);
       // Start at the current zoom (right edge of range)
       zoomSlider.value = '100';
@@ -655,6 +658,13 @@
       const ty = Number(view && view._ty) || 0;
       const ox = Number(view && view.offsetX) || 0;
       return { x: (x - tx) / s - ox, y: (y - ty) / s };
+    }
+    function sceneToScreen(x, y) {
+      const s = Number(view && view.scale) || 1;
+      const tx = Number(view && view._tx) || 0;
+      const ty = Number(view && view._ty) || 0;
+      const ox = Number(view && view.offsetX) || 0;
+      return { x: (x + ox) * s + tx, y: y * s + ty };
     }
     function sectionHeaderAt(sceneX, sceneY) {
       const y = world.runwayY();
@@ -906,6 +916,13 @@
       ctx.closePath();
       ctx.fill();
 
+      // Extend valance far beyond the top so no background shows when zoomed/panned
+      const extraTop = Math.max(800, Math.ceil((Number(view && view._ty) || 0) + 400));
+      if (extraTop > 0) {
+        ctx.fillStyle = grdTop;
+        ctx.fillRect(-bleed, -extraTop, vw + bleed * 2, extraTop);
+      }
+
       // Subtle vertical fold texture on the top valance
       ctx.save();
       // Clip to the same valance shape
@@ -923,8 +940,18 @@
       ctx.closePath();
       ctx.clip();
 
-      // Stripes disabled to avoid shimmer/flicker on movement
-      // (Keep the rich gradient valance without overlay lines.)
+      // Very subtle vertical folds for texture (low alpha, half-pixel to reduce shimmer)
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 1;
+      for (let x = -bleed + 12; x < vw + bleed - 12; x += 26) {
+        const x1 = Math.round(x) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x1, 2); ctx.lineTo(x1 - 4, topH - 2); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      for (let x = -bleed + 24; x < vw + bleed - 12; x += 26) {
+        const x1 = Math.round(x) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x1, 2); ctx.lineTo(x1 - 4, topH - 2); ctx.stroke();
+      }
       ctx.restore();
 
       // Side curtains
@@ -936,14 +963,14 @@
 
       // Left (extend beyond screen)
       ctx.fillStyle = grdSide;
-      ctx.fillRect(-bleed, 0, sideW + bleed, sideH);
+      ctx.fillRect(-bleed, -extraTop, sideW + bleed, sideH + extraTop);
       // Right (mirror)
       const grdSideR = ctx.createLinearGradient(vw - sideW, 0, vw, 0);
       grdSideR.addColorStop(0, '#8f0d1b');
       grdSideR.addColorStop(0.5, '#c4122b');
       grdSideR.addColorStop(1, '#660812');
       ctx.fillStyle = grdSideR;
-      ctx.fillRect(vw - sideW, 0, sideW + bleed, sideH);
+      ctx.fillRect(vw - sideW, -extraTop, sideW + bleed, sideH + extraTop);
 
       // Fold lines on side curtains
       ctx.strokeStyle = 'rgba(0,0,0,0.25)';
@@ -1150,11 +1177,12 @@
       // Instruction bubble if player is close — position just above the avatar's head
       const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
       if (d < 120) { // Show hint when near
-        // Player head approx position in screen coords
-        const px = (player.x - camera.x) + (view.offsetX || 0) + 16; // player anchor + head offset
-        const headY = y - 58; // head center relative to runway
-        const tipY = headY - 24; // a little above head
-        showTooltip(px, tipY, 'Press Up or Enter to open');
+        // Player head in scene space -> convert to screen for DOM tooltip
+        const headSceneX = (player.x - camera.x) + 16;
+        const headSceneY = y - 58;
+        const tipSceneY = headSceneY - 24; // above head
+        const pt = sceneToScreen(headSceneX, tipSceneY);
+        showTooltip(Math.round(pt.x), Math.round(pt.y), 'Press Up or Enter to open');
       }
     }
     
@@ -1412,14 +1440,19 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // Apply view zoom anchored near the runway so it feels closer to the carpet
-      const s = Number(view.scale) > 0 ? Number(view.scale) : 1.5;
+      // Apply view zoom (uniform scale). When zooming out, shift scene DOWN slightly
+      // to reduce empty space at the bottom and avoid stretching appearance.
+      const baseScale = Number(view.baseScale) || 1.5;
+      const s = Number(view.scale) > 0 ? Number(view.scale) : baseScale;
+      const minS = Number(window.zoomMinScale || 0.6);
       const xAnchor = vw * 0.5;           // anchor horizontally at screen center
       const yAnchor = world.runwayY();    // anchor vertically at runway
       const tx = xAnchor * (1 - s);
-      // When zoomed out (s < 1), clamping ty avoids a blank gray bar at the very top
-      const tyRaw = yAnchor * (1 - s);
-      const ty = Math.min(0, tyRaw);
+      const zoomOut = Math.max(0, Math.min(1, (baseScale - s) / Math.max(0.0001, baseScale - minS)));
+      const tyBase = yAnchor * (1 - s);
+      // Move content down as we zoom out to fill bottom space
+      const extraDown = 160 * zoomOut; // tweak as needed
+      const ty = Math.max(0, tyBase + extraDown);
       view._tx = tx; view._ty = ty; // expose current transform for input mapping
       ctx.setTransform(DPR * s, 0, 0, DPR * s, DPR * tx, DPR * ty);
       // Optional extra nudge (not used by default; stage.leftOffset handles layout)
