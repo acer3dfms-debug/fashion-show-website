@@ -1440,19 +1440,13 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // Apply view zoom (uniform scale). When zooming out, shift scene DOWN slightly
-      // to reduce empty space at the bottom and avoid stretching appearance.
+      // Apply view zoom (uniform scale) centered around the runway
       const baseScale = Number(view.baseScale) || 1.5;
       const s = Number(view.scale) > 0 ? Number(view.scale) : baseScale;
-      const minS = Number(window.zoomMinScale || 0.6);
       const xAnchor = vw * 0.5;           // anchor horizontally at screen center
       const yAnchor = world.runwayY();    // anchor vertically at runway
       const tx = xAnchor * (1 - s);
-      const zoomOut = Math.max(0, Math.min(1, (baseScale - s) / Math.max(0.0001, baseScale - minS)));
-      const tyBase = yAnchor * (1 - s);
-      // Move content down as we zoom out to fill bottom space
-      const extraDown = 160 * zoomOut; // tweak as needed
-      const ty = Math.max(0, tyBase + extraDown);
+      const ty = Math.min(0, yAnchor * (1 - s)); // keep vertical centering consistent
       view._tx = tx; view._ty = ty; // expose current transform for input mapping
       ctx.setTransform(DPR * s, 0, 0, DPR * s, DPR * tx, DPR * ty);
       // Optional extra nudge (not used by default; stage.leftOffset handles layout)
