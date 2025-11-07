@@ -56,6 +56,7 @@
 
     /* Paparazzi toggle button (world-anchored near spawn) */
     #paparazziBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
+    #controlsToggleBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
     /* Scroll Up control: bubble container with header + slider */
     #scrollWrap { position: fixed; z-index: 7; display: grid; gap: 6px; align-items: center; justify-items: stretch; width: 160px; padding: 10px 12px 12px; border-radius: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(6px); }
     #scrollWrap .title { font-size: 11px; color: var(--ui); opacity: 0.95; line-height: 1; }
@@ -79,6 +80,9 @@
     /* Settings button and panel */
     #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(8px); cursor: pointer; }
     #settingsBtn:hover { background: rgba(255,255,255,0.16); }
+    /* Always-visible Help button under Settings */
+    #helpBtn { position: fixed; left: 10px; top: 46px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-weight: 800; font-size: 24px; line-height: normal; padding: 6px 10px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
+    #helpBtn:hover { background: rgba(255,255,255,0.16); }
     #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); display: none; background: rgba(20,20,28,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
     #settingsPanel header { display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); }
     #settingsPanel header strong { font-size: 13px; }
@@ -86,9 +90,16 @@
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
-    #settingsPanel #scrollWrap, #settingsPanel #musicWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
-    #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
-    #settingsPanel #zoomSlider, #settingsPanel #musicSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
+    #settingsPanel #controlsToggleBtn { position: static; width: 100%; }
+    #settingsPanel #scrollWrap, #settingsPanel #musicWrap, #settingsPanel #controlsSizeWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
+    #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title, #settingsPanel #controlsSizeWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
+    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
+    /* Make both sliders share the same clean bar + thumb styling inside Settings */
+    #settingsPanel input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
+    #settingsPanel input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22); }
+    #settingsPanel input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.28); margin-top: -5px; box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+    #settingsPanel input[type="range"]::-moz-range-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22); }
+    #settingsPanel input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.28); box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
     /* Remove blue tap highlight on mobile for interactive chrome */
     #controls button, .navBtn, #closeModal {
       -webkit-tap-highlight-color: transparent;
@@ -118,6 +129,8 @@
   
   <!-- Settings launcher and panel -->
   <button id="settingsBtn" aria-haspopup="dialog" aria-controls="settingsPanel">Settings</button>
+  <button id="helpBtn" title="Help" aria-label="Help">?</button>
+  <button id="controlsToggleBtn" title="Toggle on-screen buttons" aria-pressed="true">On-screen Buttons: On</button>
   <div id="settingsPanel" role="dialog" aria-modal="false" aria-label="Settings">
     <header>
       <strong>Settings</strong>
@@ -132,6 +145,10 @@
   <div id="scrollWrap">
     <div class="title">Scroll Up &amp; Scroll Down</div>
     <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
+  </div>
+  <div id="controlsSizeWrap" style="display:none;">
+    <div class="title">On-screen Button Size <span id="controlsSizeLabel"></span></div>
+    <input id="controlsSizeSlider" type="range" min="50" max="150" step="5" aria-label="On-screen Button Size" />
   </div>
   <div id="musicWrap" style="display:none;">
     <div class="title">Music Volume <span id="musicLabel"></span></div>
@@ -1126,10 +1143,13 @@
         }
       } catch(_) {}
     })();
-    // Compute a little extra world to the right of the last door and position the endcap logo
+    // Position the endcap logo with the same spacing as the first billboard-to-door gap
     const lastRightEdge = stage.leftOffset + Math.max.apply(null, sections.map(s => s.x + s.w));
-    const TAIL_GAP = 800; // space after last door
-    const ENDCAP_X = lastRightEdge + Math.floor(TAIL_GAP * 0.5); // center branding in the tail gap
+    const LAST_SEC = sections[sections.length - 1] || { x: 0, w: 360 };
+    const lastCenter = stage.leftOffset + LAST_SEC.x + LAST_SEC.w / 2;
+    const END_BILLBOARD_OFFSET = 800; // push end billboard farther to the right
+    const TAIL_GAP = 800; // still add world space after last door for padding
+    const ENDCAP_X = Math.floor(lastCenter + END_BILLBOARD_OFFSET);
     // Add generous walking room on both ends for future easter eggs/partners
     const EXTRA_WALK_LEFT = 2000;
     const EXTRA_WALK_RIGHT = 2000;
@@ -1163,26 +1183,54 @@
     // Mobile buttons
     const btnLeft  = document.getElementById('btnLeft'); // Left button element
     const btnRight = document.getElementById('btnRight'); // Right button element
-    const btnUp    = document.getElementById('btnUp'); // Up/open button
-    const btnDown  = document.getElementById('btnDown'); // Down/close button
-    const btnEnter = document.getElementById('btnEnter'); // Enter action button
+    const btnUp    = document.getElementById('btnUp'); // Up/open button (will serve as Up/Enter)
+    let   btnSprint = document.getElementById('btnSprint') || document.getElementById('btnDown'); // repurpose Down as Sprint
+    const btnEnter = document.getElementById('btnEnter'); // legacy Enter button (will be hidden)
     const paparazziBtn = document.getElementById('paparazziBtn');
+    const controlsToggleBtn = document.getElementById('controlsToggleBtn');
     const zoomSlider = document.getElementById('zoomSlider');
     const scrollWrap = document.getElementById('scrollWrap');
+    const controlsSizeWrap = document.getElementById('controlsSizeWrap');
+    const controlsSizeSlider = document.getElementById('controlsSizeSlider');
     const settingsBtn = document.getElementById('settingsBtn');
+    const helpBtn = document.getElementById('helpBtn');
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsContent = document.getElementById('settingsContent');
     let settingsOpen = false;
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
-    btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
-    btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
-    btnLeft.addEventListener('pointerleave',() => press('left', false)); // Stop if pointer leaves
-    btnRight.addEventListener('pointerdown',() => press('right', true)); // Hold right
-    btnRight.addEventListener('pointerup',  () => press('right', false)); // Release right
-    btnRight.addEventListener('pointerleave',() => press('right', false)); // Stop if pointer leaves
-    btnUp.addEventListener('click', () => tryOpen()); // Tap up to open
-    btnDown.addEventListener('click', () => closeModal()); // Tap down to close
-    btnEnter.addEventListener('click', () => tryOpen()); // Tap to open
+    if (btnLeft) {
+      btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
+      btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
+      btnLeft.addEventListener('pointerleave',() => press('left', false)); // Stop if pointer leaves
+    }
+    if (btnRight) {
+      btnRight.addEventListener('pointerdown',() => press('right', true)); // Hold right
+      btnRight.addEventListener('pointerup',  () => press('right', false)); // Release right
+      btnRight.addEventListener('pointerleave',() => press('right', false)); // Stop if pointer leaves
+    }
+    if (btnUp) {
+      try { btnUp.textContent = '↑ / Enter'; btnUp.title = 'Open (Up/Enter)'; } catch(_) {}
+      btnUp.addEventListener('click', () => tryOpen()); // Tap to open
+    }
+    // Hide legacy Enter button if present
+    if (btnEnter) { try { btnEnter.style.display = 'none'; } catch(_) {} }
+    // Repurpose Down as Sprint toggle when btnSprint not already present
+    if (btnSprint && !document.getElementById('btnSprint')) {
+      try {
+        btnSprint.id = 'btnSprint';
+        btnSprint.textContent = 'Sprint: Off';
+        btnSprint.setAttribute('aria-pressed','false');
+        btnSprint.setAttribute('title','Toggle sprint');
+        btnSprint.setAttribute('aria-label','Toggle sprint');
+      } catch(_) {}
+    }
+    if (btnSprint) {
+      btnSprint.addEventListener('click', () => {
+        keys.run = !keys.run;
+        btnSprint.setAttribute('aria-pressed', String(keys.run));
+        btnSprint.textContent = keys.run ? 'Sprint: On' : 'Sprint: Off';
+      });
+    }
     // Start/stop mouse-driven walking along the carpet
     function startMouseWalk(targetSceneX) {
       mouseWalk.active = true; mouseWalk.targetX = targetSceneX;
@@ -1207,12 +1255,24 @@
       const sy = (world.runwayY() + 40) * s + ty; // slightly below avatar feet
       paparazziBtn.style.left = Math.round(sx) + 'px';
       paparazziBtn.style.top = Math.round(sy) + 'px';
+      const gap = 8;
+      let yBelow = sy + (paparazziBtn.offsetHeight || 24) + gap;
+      if (controlsToggleBtn) {
+        controlsToggleBtn.style.left = Math.round(sx) + 'px';
+        controlsToggleBtn.style.top  = Math.round(yBelow) + 'px';
+        yBelow += (controlsToggleBtn.offsetHeight || 24) + gap;
+      }
+      if (controlsSizeWrap) {
+        // Place the size slider below the scroll slider
+        const wrapX2 = sx;
+        const wrapY2 = (parseFloat(scrollWrap && scrollWrap.style.top) || (yBelow)) + ((scrollWrap && scrollWrap.offsetHeight) || 24) + gap;
+        controlsSizeWrap.style.left = Math.round(wrapX2) + 'px';
+        controlsSizeWrap.style.top  = Math.round(wrapY2) + 'px';
+      }
       if (scrollWrap) {
-        // Place Scroll Up bubble directly below the paparazzi button
-        const btnH = paparazziBtn.offsetHeight || 24;
-        const gap = 8;
+        // Place Scroll Up bubble directly below the toggle button (or paparazzi if no toggle)
         const wrapX = sx;
-        const wrapY = sy + btnH + gap;
+        const wrapY = yBelow;
         scrollWrap.style.left = Math.round(wrapX) + 'px';
         scrollWrap.style.top  = Math.round(wrapY) + 'px';
       }
@@ -1222,6 +1282,31 @@
         window.paparazziOn = !window.paparazziOn;
         paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
         paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
+      });
+    }
+    // Toggle on-screen controls (lower-left gamepad buttons)
+    const controlsDiv = document.getElementById('controls');
+    function applyControlsVisible(on) {
+      try {
+        if (!controlsDiv) return;
+        controlsDiv.style.display = on ? '' : 'none';
+        if (controlsToggleBtn) {
+          controlsToggleBtn.setAttribute('aria-pressed', String(on));
+          controlsToggleBtn.textContent = 'On-screen Buttons: ' + (on ? 'On' : 'Off');
+        }
+      } catch(_) {}
+    }
+    let controlsOn = true;
+    try {
+      const saved = localStorage.getItem('controlsOn');
+      if (saved != null) controlsOn = saved === 'true';
+    } catch(_) {}
+    applyControlsVisible(controlsOn);
+    if (controlsToggleBtn) {
+      controlsToggleBtn.addEventListener('click', () => {
+        controlsOn = !controlsOn;
+        try { localStorage.setItem('controlsOn', String(controlsOn)); } catch(_) {}
+        applyControlsVisible(controlsOn);
       });
     }
     if (zoomSlider) {
@@ -1238,12 +1323,47 @@
         view.yLift = lift;
       });
     }
+    // On-screen button size slider
+    function getControlsScalePct(){
+      // Always default to 100% on refresh (do not persist)
+      return 100;
+    }
+    function applyControlsScale(pct){
+      const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
+      if (controlsDiv) {
+        controlsDiv.style.transformOrigin = 'bottom right';
+        controlsDiv.style.transform = 'scale(' + s + ')';
+      }
+      // Also scale the Settings (and Help) buttons so the slider affects them too
+      if (typeof settingsBtn !== 'undefined' && settingsBtn) {
+        settingsBtn.style.transformOrigin = 'top left';
+        settingsBtn.style.transform = 'scale(' + s + ')';
+      }
+      if (typeof helpBtn !== 'undefined' && helpBtn) {
+        helpBtn.style.transformOrigin = 'top left';
+        helpBtn.style.transform = 'scale(' + s + ')';
+      }
+    }
+    if (controlsSizeSlider) {
+      const lbl = document.getElementById('controlsSizeLabel');
+      const init = getControlsScalePct();
+      controlsSizeSlider.value = String(init);
+      if (lbl) lbl.textContent = init + '%';
+      applyControlsScale(init);
+      controlsSizeSlider.addEventListener('input', () => {
+        const v = Number(controlsSizeSlider.value)||100;
+        if (lbl) lbl.textContent = v + '%';
+        applyControlsScale(v);
+      });
+    }
     // SETTINGS PANEL WIRES
     function openSettings() {
       settingsOpen = true;
       settingsPanel.style.display = 'block';
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(controlsToggleBtn); controlsToggleBtn.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(controlsSizeWrap); controlsSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
     }
@@ -1256,8 +1376,29 @@
     const settingsClose = document.getElementById('settingsClose');
     if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
     // Hide controls by default until settings opened
+    // Match help button size to the Settings button for prominence
+    function sizeHelpBtn() {
+      try {
+        if (!helpBtn || !settingsBtn) return;
+        const w = settingsBtn.offsetWidth;
+        const h = settingsBtn.offsetHeight;
+        if (w > 0) helpBtn.style.width = w + 'px';
+        if (h > 0) helpBtn.style.height = Math.round(h * 2) + 'px'; // 100% taller (2x)
+      } catch(_) {}
+    }
+    sizeHelpBtn();
+    window.addEventListener('resize', sizeHelpBtn);
+    if (helpBtn) helpBtn.addEventListener('click', () => {
+      // Open the same modal content as the 'about' door
+      try {
+        const sec = sections.find(s => s && s.key === 'about');
+        if (sec) openModal(sec.title, sec.content);
+      } catch(_) {}
+    });
     try { paparazziBtn.style.display = 'none'; } catch(_){ }
+    try { controlsToggleBtn.style.display = 'none'; } catch(_){ }
     try { scrollWrap.style.display = 'none'; } catch(_){ }
+    try { controlsSizeWrap.style.display = 'none'; } catch(_){ }
 
     // CLICKABLE DOOR HEADERS (open by clicking the marquee header)
     function screenToScene(x, y) {
@@ -1568,6 +1709,25 @@
     const OPEN_DISTANCE = 80;
 
     function tryOpen() { // Attempts to open the nearest section if close
+      // First: teleport if near a limo
+      try {
+        // Require being closer to the limo center before teleporting
+        const thresh = 100;
+        const leftC = Number(window.limoLeftCenterX);
+        const rightC = Number(window.limoRightCenterX);
+        if (Number.isFinite(leftC) && Math.abs(player.x - leftC) < thresh) {
+          // teleport to the right-side spawn
+          const off = Number(typeof LIMO_SPAWN_OFFSET_X === 'number' ? LIMO_SPAWN_OFFSET_X : 170);
+          player.x = Math.max(world.minX, Math.min(world.maxX, (world.maxX || 6000) - off));
+          return;
+        }
+        if (Number.isFinite(rightC) && Math.abs(player.x - rightC) < thresh) {
+          const off = Number(typeof LIMO_SPAWN_OFFSET_X === 'number' ? LIMO_SPAWN_OFFSET_X : 170);
+          player.x = Math.max(world.minX, Math.min(world.maxX, (world.minX || -2000) + off));
+          return;
+        }
+      } catch(_) {}
+      // Otherwise: open nearest section if close enough
       const near = nearestSection(); // Find nearest
       if (near && near.dist < OPEN_DISTANCE) openModal(near.sec.title, near.sec.content); // Open if within threshold
     }
@@ -1735,6 +1895,8 @@
         openings.push({ left, right });
       }
       // Also block posts/ropes from the start up through the limo's right edge
+      let limoGapRight = null; // expose for rope segment suppression below
+      let rightLimoGapLeft = null; // left boundary of the right-side limo gap
       if (limoReady && limoImg && limoImg.naturalWidth) {
         const isSmallScreenLR = (vw < 900) || (vh < 600);
         const targetHLR = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR ? 0.22 : 0.18) * 1.6)));
@@ -1746,8 +1908,17 @@
         const screenLeftLR = Math.floor(worldXLR - camera.x);
         const padLR = 24;
         const rightEdge = screenLeftLR + dwLR + padLR;
+        limoGapRight = rightEdge; // remember the right boundary of the limo gap
         // One large opening that removes any posts/rope on or before the limo
         openings.push({ left: -100000, right: rightEdge });
+
+        // Mirror calculation for the right-side limo: create an opening from its left edge onward
+        const centerWorldXR = (world && typeof world.maxX === 'number' ? world.maxX : 6000);
+        const worldXR = Math.floor(centerWorldXR - dwLR / 2 + 20);
+        const screenLeftR = Math.floor(worldXR - camera.x);
+        const leftEdgeR = screenLeftR - padLR;
+        rightLimoGapLeft = leftEdgeR;
+        openings.push({ left: leftEdgeR, right: 100000 });
       }
 
       let prevX_rope = null;
@@ -1787,6 +1958,8 @@
           for (const seg of segments) {
             const a = seg[0], b = seg[1];
             if (Math.abs(b - a) < 6) continue; // too short to see
+            // Suppress the tiny rope run that starts exactly at the carpet start (limo gap)
+            if (limoGapRight != null && Math.min(a, b) <= limoGapRight + 2) continue;
             const midX = (a + b) / 2;
             // top rope (far/audience side only)
             ctx.beginPath();
@@ -1801,22 +1974,26 @@
       ctx.shadowColor = 'rgba(255,180,180,0.35)'; // Soft warm glow
       ctx.shadowBlur = 24;
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway'); // Use CSS variable
-      // Leave a gap under the limo so it sits BEFORE the catwalk
+      // Leave gaps under both limos so they sit BEFORE the catwalk (no carpet under limos)
       if (limoReady && limoImg && limoImg.naturalWidth) {
         const isSmallScreenLR2 = (vw < 900) || (vh < 600);
         const targetHLR2 = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR2 ? 0.22 : 0.18) * 1.6)));
         const scaleLR2 = targetHLR2 / limoImg.naturalHeight;
         const dwLR2 = Math.max(20, Math.round(limoImg.naturalWidth * scaleLR2));
-        const centerWorldXLR2 = (world && typeof world.minX === 'number' ? world.minX : -2000);
-        const extraLeftLR2 = 20;
-        const worldXLR2 = Math.floor(centerWorldXLR2 - dwLR2 / 2 - extraLeftLR2);
-        const screenLeftLR2 = Math.floor(worldXLR2 - camera.x);
         const padLR2 = 24;
-        // Do NOT draw any carpet to the left of the limo; only start on the right side
-        const gapR = screenLeftLR2 + dwLR2 + padLR2;
-        const rightStart = Math.max(-2000, Math.min(vw + 2000, gapR));
-        const rightEnd = vw + 2000;
-        if (rightEnd > rightStart) ctx.fillRect(rightStart, y - 2, rightEnd - rightStart, 24);
+        // Left limo gap right edge
+        const leftCenter = (world && typeof world.minX === 'number' ? world.minX : -2000);
+        const leftWorldX = Math.floor(leftCenter - dwLR2 / 2 - 20);
+        const leftGapRight = Math.floor(leftWorldX - camera.x) + dwLR2 + padLR2;
+        // Right limo gap left edge
+        const rightCenter = (world && typeof world.maxX === 'number' ? world.maxX : 6000);
+        const rightWorldX = Math.floor(rightCenter - dwLR2 / 2 + 20);
+        const rightGapLeft = Math.floor(rightWorldX - camera.x) - padLR2;
+        const fullStart = -2000;
+        const fullEnd = vw + 2000;
+        const drawL = Math.max(fullStart, leftGapRight);
+        const drawR = Math.min(fullEnd, rightGapLeft);
+        if (drawR > drawL) ctx.fillRect(drawL, y - 2, drawR - drawL, 24);
       } else {
         ctx.fillRect(-2000, y - 2, vw + 4000, 24); // full strip when no limo computed
       }
@@ -1830,18 +2007,21 @@
           const targetHLR3 = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR3 ? 0.22 : 0.18) * 1.6)));
           const scaleLR3 = targetHLR3 / limoImg.naturalHeight;
           const dwLR3 = Math.max(20, Math.round(limoImg.naturalWidth * scaleLR3));
-          const centerWorldXLR3 = (world && typeof world.minX === 'number' ? world.minX : -2000);
-          const extraLeftLR3 = 20;
-          const worldXLR3 = Math.floor(centerWorldXLR3 - dwLR3 / 2 - extraLeftLR3);
-          const left = Math.floor(worldXLR3 - camera.x) - 24;
-          const right = left + dwLR3 + 48;
-          return { left, right, ok: true };
+          const leftCenter3 = (world && typeof world.minX === 'number' ? world.minX : -2000);
+          const leftX3 = Math.floor(leftCenter3 - dwLR3 / 2 - 20);
+          const left = Math.floor(leftX3 - camera.x) - 24;
+          const leftRight = left + dwLR3 + 48;
+          const rightCenter3 = (world && typeof world.maxX === 'number' ? world.maxX : 6000);
+          const rightX3 = Math.floor(rightCenter3 - dwLR3 / 2 + 20);
+          const rightLeft = Math.floor(rightX3 - camera.x) - 24;
+          return { leftStop: leftRight, rightStop: rightLeft, ok: true };
         }
         return { ok: false };
       })();
       for (let x = -((camera.x % 80)+80) - 200; x < vw + 80 + 200; x += 80) {
-        // Skip all studs to the left of the carpet start (right edge of limo gap)
-        if (studsGap.ok && x < studsGap.right) continue;
+        // Skip studs left of left gap and right of right gap
+        if (studsGap.ok && x < studsGap.leftStop) continue;
+        if (studsGap.ok && x > studsGap.rightStop) continue;
         ctx.beginPath();
         ctx.arc(x, y + 26, 2.2, 0, Math.PI*2);
         ctx.fill();
@@ -1913,6 +2093,36 @@
       ctx.shadowBlur = 12;
       ctx.drawImage(limoImg, dx, dy, dw, dh);
       ctx.restore();
+      // Expose world-space center for interactions
+      try { window.limoLeftCenterX = centerWorldX; } catch(_) {}
+    }
+
+    // Limo at far right of the catwalk (mirrored)
+    function drawLimoRight() {
+      if (!limoReady || !limoImg || !limoImg.naturalWidth) return;
+      const y = world.runwayY();
+      const isSmallScreen = (vw < 900) || (vh < 600);
+      // Same scale as left limo
+      const targetH = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreen ? 0.22 : 0.18) * 1.6)));
+      const scale = targetH / limoImg.naturalHeight;
+      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale));
+      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale));
+      // Anchor at the far-right world edge
+      const centerWorldX = (world && typeof world.maxX === 'number' ? world.maxX : 6000);
+      const extraRight = 20; // push slightly further to the right
+      const worldX = Math.floor(centerWorldX - dw / 2 + extraRight);
+      const dx = Math.floor(worldX - camera.x);
+      const baseline = Math.floor(y + 26 + 40);
+      const dy = Math.floor(baseline - dh);
+      // Draw mirrored (flip horizontally around its left edge)
+      ctx.save();
+      ctx.translate(dx + dw, 0);
+      ctx.scale(-1, 1);
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 12;
+      ctx.drawImage(limoImg, 0, dy, dw, dh);
+      ctx.restore();
+      try { window.limoRightCenterX = centerWorldX; } catch(_) {}
     }
 
     function drawMarquee(sec) { // Draw an interactive marquee for a section
@@ -2460,6 +2670,7 @@
 
       drawRunway();             // Ground and runway
       drawLimoLeft();           // Limo at far left edge
+      drawLimoRight();          // Limo at far right edge (mirrored)
       drawBackstageProps();     // Statues and chairs across the back wall
 
       // Draw branding/billboard in front of backstage props
@@ -2507,7 +2718,7 @@
       const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
       const getPct = () => {
         const v = Number(localStorage.getItem('musicVolPct'));
-        return Number.isFinite(v) ? clamp(v, 0, 150) : 60; // default 60%
+        return Number.isFinite(v) ? clamp(v, 0, 150) : 50; // default 50%
       };
       const ensureGraph = () => {
         if (ctx) return;
