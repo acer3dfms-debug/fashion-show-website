@@ -217,9 +217,13 @@
         const isLandscape = vw > vh;
         const base = window.view.baseScale || window.view.scale || 1.5;
         if (isLandscape) {
-          window.view.scale = Math.min(2, base * 1.15); // enlarge ~15% in landscape
+          // Landscape: shrink more on touch devices, and reduce on desktops for wider view
+          const factor = (typeof IS_TOUCH !== 'undefined' && IS_TOUCH) ? 0.70 : 0.80; // desktop ~20% smaller
+          window.view.scale = Math.max(0.6, Math.min(2, base * factor));
         } else {
-          window.view.scale = Math.max(0.8, base * 0.90); // shrink ~10% in portrait
+          // Portrait: shrink a bit on touch, keep base on desktop
+          const factorP = (typeof IS_TOUCH !== 'undefined' && IS_TOUCH) ? 0.90 : 1.0;
+          window.view.scale = Math.max(0.6, Math.min(2, base * factorP));
         }
       }
       buildMarblePattern(); // Rebuild background texture for new size/theme
@@ -2030,14 +2034,18 @@
       player.anim.frame = Math.floor(player.anim.accum) % seq.len;
 
       // camera follows with smoothing, while keeping player on-screen with margins
-      const baseTarget = player.x - vw * 0.4; // original follow bias
+      // Bias a bit more to the left so the camera pans left sooner (shows more of left side)
+      const baseTarget = player.x - vw * 0.55;
       // Screen margin constraints (pixels) accounting for scene nudge
       const margin = { left: 60, right: 60 };
       const pxNudge = (view.offsetX || 0);
       const lowerBound = player.x + pxNudge - (vw - margin.right); // min camera.x so player not off right
       const upperBound = player.x + pxNudge - margin.left;          // max camera.x so player not off left
-      // World bounds
-      const worldMin = 0;
+      // World bounds (allow slight negative to reveal the leftmost quick door fully)
+      const leftmostSecX = (function(){
+        try { return Math.min.apply(null, sections.map(s => stage.leftOffset + s.x)); } catch(_) { return 0; }
+      })();
+      const worldMin = Math.min(0, leftmostSecX - 80); // allow up to ~80px beyond the first item
       const worldMax = Math.max(0, world.width - vw);
       // Valid camera range intersection
       const camMin = Math.max(worldMin, lowerBound);
