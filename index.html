@@ -56,11 +56,16 @@
 
     /* Paparazzi toggle button (world-anchored near spawn) */
     #paparazziBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
-    #zoomSlider { position: fixed; z-index: 7; width: 90px; accent-color: var(--accent); }
+    /* Scroll Up control: bubble container with header + slider */
+    #scrollWrap { position: fixed; z-index: 7; display: grid; gap: 6px; align-items: center; justify-items: stretch; width: 160px; padding: 10px 12px 12px; border-radius: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(6px); }
+    #scrollWrap .title { font-size: 11px; color: var(--ui); opacity: 0.95; line-height: 1; }
+    #zoomSlider { position: static; width: 100%; accent-color: var(--accent); }
     #zoomSlider, #zoomSlider::-webkit-slider-runnable-track { height: 16px; }
-    #zoomSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); margin-top: -2px; }
-    #zoomSlider::-moz-range-track { height: 16px; }
-    #zoomSlider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); }
+    #zoomSlider::-webkit-slider-runnable-track { border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); }
+    /* Center 28px thumb; nudge slightly down and extend visually with a bottom highlight */
+    #zoomSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); margin-top: -3px; box-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 2px 0 var(--accent); }
+    #zoomSlider::-moz-range-track { height: 16px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); }
+    #zoomSlider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
 
     /* Prevent text selection / callout on touch for on-screen controls and HUD */
     #controls, #controls button, #uiBar, #legend, #tooltip, canvas, .navBtn {
@@ -101,7 +106,10 @@
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
-  <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Zoom" />
+  <div id="scrollWrap">
+    <div class="title">Scroll Up</div>
+    <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
+  </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
       <header> <!-- Modal header with title and close action -->
@@ -434,6 +442,27 @@
       }
 
       marbleTex = off; // store full-screen texture
+    }
+
+    // Pre-rendered golden bulb sprite for marquee lights (for smooth drawing)
+    let BULB_SPRITE = null;
+    function ensureBulbSprite() {
+      if (BULB_SPRITE) return BULB_SPRITE;
+      // Increase bulb size by 50% for a bolder look
+      const s = 30; // sprite size (square)
+      const off = document.createElement('canvas');
+      off.width = s; off.height = s;
+      const c = off.getContext('2d');
+      const r = s / 2;
+      const g = c.createRadialGradient(r, r, 0, r, r, r);
+      // Warm gold glow with a tighter falloff for a crisper look
+      g.addColorStop(0.0, 'rgba(241,207,99,1.0)');
+      g.addColorStop(0.22, 'rgba(241,207,99,0.85)');
+      g.addColorStop(0.60, 'rgba(241,207,99,0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(r, r, r, 0, Math.PI*2); c.fill();
+      BULB_SPRITE = off;
+      return BULB_SPRITE;
     }
 
     // Draw branding image at spawn area behind the carpet (world-anchored)
@@ -876,6 +905,7 @@
     const btnEnter = document.getElementById('btnEnter'); // Enter action button
     const paparazziBtn = document.getElementById('paparazziBtn');
     const zoomSlider = document.getElementById('zoomSlider');
+    const scrollWrap = document.getElementById('scrollWrap');
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
     btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
@@ -897,11 +927,14 @@
       const sy = (world.runwayY() + 40) * s + ty; // slightly below avatar feet
       paparazziBtn.style.left = Math.round(sx) + 'px';
       paparazziBtn.style.top = Math.round(sy) + 'px';
-      if (zoomSlider) {
-        const zx = (SPAWN_X + 260 - camera.x + ox) * s + tx; // moved 25px further right
-        const zy = (world.runwayY() + 53) * s + ty; // moved 10px further down
-        zoomSlider.style.left = Math.round(zx) + 'px';
-        zoomSlider.style.top = Math.round(zy) + 'px';
+      if (scrollWrap) {
+        // Place Scroll Up bubble directly below the paparazzi button
+        const btnH = paparazziBtn.offsetHeight || 24;
+        const gap = 8;
+        const wrapX = sx;
+        const wrapY = sy + btnH + gap;
+        scrollWrap.style.left = Math.round(wrapX) + 'px';
+        scrollWrap.style.top  = Math.round(wrapY) + 'px';
       }
     }
     if (paparazziBtn) {
@@ -919,7 +952,7 @@
       zoomSlider.value = '0';
       view.yLift = 0;
       view.autoScale = false; // ensure auto zoom doesn’t fight manual lift
-      zoomSlider.setAttribute('aria-label', 'View Down');
+      zoomSlider.setAttribute('aria-label', 'Scroll Up');
       zoomSlider.addEventListener('input', () => {
         const lift = valueToLift(Number(zoomSlider.value));
         view.yLift = lift;
@@ -1146,9 +1179,12 @@
     function hideHoverTip() { if (hoverTipEl) hoverTipEl.style.display = 'none'; }
 
     // OPEN section when near
+    // Shared proximity threshold to open a door (in px)
+    const OPEN_DISTANCE = 80;
+
     function tryOpen() { // Attempts to open the nearest section if close
       const near = nearestSection(); // Find nearest
-      if (near && near.dist < 80) openModal(near.sec.title, near.sec.content); // Open if within 80px
+      if (near && near.dist < OPEN_DISTANCE) openModal(near.sec.title, near.sec.content); // Open if within threshold
     }
 
     function nearestSection() { // Returns nearest section to player.x
@@ -1372,16 +1408,18 @@
       ctx.fillStyle = '#2a2a36';
       ctx.fillRect(screenX, y - 220, 18, 220); // Left pillar
       ctx.fillRect(screenX + sec.w - 18, y - 220, 18, 220); // Right pillar
-      // Header light box (top panel)
+      // Header panel (screen-like black box)
       const headerTop = y - 220;
       const headerBottom = y - 140;
-      const grd = ctx.createLinearGradient(0, headerTop, 0, headerBottom); // Vertical gradient
-      grd.addColorStop(0, '#3a3a4a');
-      grd.addColorStop(1, '#1c1c26');
+      // Darker, subtle gradient for the header panel (screen-like)
+      const grd = ctx.createLinearGradient(0, headerTop, 0, headerBottom);
+      grd.addColorStop(0, '#0d0e12'); // near-black top
+      grd.addColorStop(1, '#191a22'); // very dark bottom
       ctx.fillStyle = grd;
       ctx.fillRect(screenX + 18, headerTop, sec.w - 36, 80); // Panel between pillars
       // Title text in the header
-      ctx.fillStyle = '#ffffff';
+      const goldText = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
+      ctx.fillStyle = goldText;
       ctx.font = '700 16px system-ui'; // Bold 16px
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -1394,59 +1432,47 @@
 
       // Flashing bulbs around clickable header panel (door button)
       (function drawHeaderLights(){
-        const hx = screenX + 18; // header box x
-        const hy = headerTop;    // header box y
-        const hw = sec.w - 36;   // header box width
-        const hh = 80;           // header box height
+        // Round all geometry to whole pixels to avoid subpixel shimmer while panning
+        const hx = Math.round(screenX + 18); // header box x
+        const hy = Math.round(headerTop);    // header box y
+        const hw = Math.round(sec.w - 36);   // header box width
+        const hh = 80;                       // header box height
         const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
         ctx.save();
         // Twinkling bulbs along the frame (no outline)
         const t = performance.now() * 0.001;
         const bulbSpacing = 20;
-        const bulbR = 2.4;
+        const sprite = ensureBulbSprite();
+        const r = sprite.width >> 1; // half size
+        // Bring bulbs slightly closer to the header (less up/out)
+        const outside = Math.max(2, r - 6);
         ctx.globalCompositeOperation = 'screen';
-        // Top edge bulbs
-        for (let x = hx; x <= hx + hw; x += bulbSpacing) {
+        // Top edge bulbs (inside panel to avoid clipping)
+        for (let x = hx + 8; x <= hx + hw - 8; x += bulbSpacing) {
           const i = Math.floor((x - hx) / bulbSpacing);
           const phase = i * 0.55;
           const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
           const a = 0.16 + Math.pow(pulse, 6) * 0.84;
-          const gx = x, gy = hy - 4;
-          const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.0);
-          g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
-          g.addColorStop(1, 'rgba(241,207,99,0)');
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+          // Place bulbs centered on the outside of the top edge
+          const gx = Math.round(x), gy = Math.round(hy - outside);
+          ctx.globalAlpha = Math.min(1, a);
+          ctx.drawImage(sprite, gx - r, gy - r);
         }
-        // Bottom edge bulbs
-        for (let x = hx + bulbSpacing/2; x <= hx + hw; x += bulbSpacing) {
-          const i = Math.floor((x - hx) / bulbSpacing) + 29;
-          const phase = i * 0.55;
-          const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
-          const a = 0.16 + Math.pow(pulse, 6) * 0.84;
-          // Keep bottom bulbs inside the header so they never overlap curtains
-          const gx = x, gy = hy + hh - 4;
-          const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR * 4.0);
-          g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
-          g.addColorStop(1, 'rgba(241,207,99,0)');
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
-        }
-        // Left/right edges bulbs (sparser)
-        for (let y2 = hy + 10; y2 <= hy + hh - 10; y2 += bulbSpacing * 1.05) {
+        // Left/right edges bulbs (sparser) — no bottom-row bulbs to avoid clipping
+        for (let y2 = hy + 12; y2 <= hy + hh - 12; y2 += bulbSpacing * 1.05) {
           const i = Math.floor((y2 - hy) / bulbSpacing);
           const phase = i * 0.6;
           const pulse = Math.max(0, Math.sin(t * 3.2 + phase));
           const a = 0.12 + Math.pow(pulse, 6) * 0.78;
-          let gx1 = hx - 2, gy1 = y2; // keep within/near header frame
-          let g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, bulbR * 4.0);
-          g1.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
-          g1.addColorStop(1, 'rgba(241,207,99,0)');
-          ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(gx1, gy1, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
-          let gx2 = hx + hw + 2, gy2 = y2; // keep within/near header frame
-          let g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, bulbR * 4.0);
-          g2.addColorStop(0, `rgba(241,207,99,${Math.min(1,a*0.9)})`);
-          g2.addColorStop(1, 'rgba(241,207,99,0)');
-          ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(gx2, gy2, bulbR * 3.5, 0, Math.PI*2); ctx.fill();
+          // Place bulbs centered on the outside of the left/right edges
+          const gx1 = Math.round(hx - outside), gy1 = Math.round(y2);
+          const gx2 = Math.round(hx + hw + outside), gy2 = Math.round(y2);
+          ctx.globalAlpha = Math.min(1, a);
+          ctx.drawImage(sprite, gx1 - r, gy1 - r);
+          ctx.globalAlpha = Math.min(1, a * 0.9);
+          ctx.drawImage(sprite, gx2 - r, gy2 - r);
         }
+        ctx.globalAlpha = 1;
         ctx.restore();
       })();
 
@@ -1525,7 +1551,8 @@
       // (Removed gold tiebacks to avoid visual confusion)
       // Instruction bubble if player is close — position just above the avatar's head
       const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
-      if (d < 120) { // Show hint when near
+      // Only show the hint when you're firmly inside the open zone
+      if (d < Math.max(10, (OPEN_DISTANCE - 10))) { // a little tighter than open distance
         // Anchor tooltip near the avatar's feet (runway level), so it hovers around the shoes
         const footSceneX = (player.x - camera.x) + 16; // player center column
         const footSceneY = y - 6; // just above the carpet baseline
@@ -1536,14 +1563,16 @@
     
 
     function drawPlayer() { // Avatar (sprite sheet if available; fallback to blocky)
-      const baseY = world.runwayY();                // Ground baseline (runway level)
+      // Raise the avatar 5px to better center on the catwalk
+      const baseY = world.runwayY() - 5;           // Ground baseline (nudged up)
       const px = player.x - camera.x;               // Player X on screen
       const facing = player.facing || 1;            // 1 or -1
 
       // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath();
-      ctx.ellipse(px + 16, baseY + 10, 22, 6, 0, 0, Math.PI*2);
+      // Nudge shadow up a bit to sit tighter under the feet
+      ctx.ellipse(px + 16, baseY + 14, 22, 6, 0, 0, Math.PI*2);
       ctx.fill();
 
       // Prefer sprite sheet rendering when available
