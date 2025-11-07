@@ -212,11 +212,14 @@
       if (window.view && window.view.autoScale) {
         window.view.scale = autoScaleForWidth(vw);
       }
-      // Landscape tweak: zoom out a bit when width > height
+      // Orientation tweaks: scale up a bit in landscape (content larger), scale down slightly in portrait
       if (window.view && window.view.autoScaleLandscape) {
         const isLandscape = vw > vh;
+        const base = window.view.baseScale || window.view.scale || 1.5;
         if (isLandscape) {
-          window.view.scale = (window.view.landscapeScale || 0.9); // pull back further in landscape
+          window.view.scale = Math.min(2, base * 1.15); // enlarge ~15% in landscape
+        } else {
+          window.view.scale = Math.max(0.8, base * 0.90); // shrink ~10% in portrait
         }
       }
       buildMarblePattern(); // Rebuild background texture for new size/theme
