@@ -1040,6 +1040,46 @@
       mouseWalk.targetX = pt.x; // update target; movement resolved in update()
     });
     window.addEventListener('mouseup', () => { if (mouseWalk.active) stopMouseWalk(); });
+    
+    // Touch support (iOS Safari): tap/hold on carpet to walk, slide to steer, lift to stop
+    let activeTouchId = null;
+    function getTouchById(touchList, id) {
+      for (let i = 0; i < touchList.length; i++) if (touchList[i].identifier === id) return touchList[i];
+      return null;
+    }
+    canvas.addEventListener('touchstart', (e) => {
+      if (modalWrap && modalWrap.style.display === 'grid') return;
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      const rect = canvas.getBoundingClientRect();
+      const sx = t.clientX - rect.left;
+      const sy = t.clientY - rect.top;
+      const pt = screenToScene(sx, sy);
+      const y = world.runwayY();
+      if (pt.y >= y - 8 && pt.y <= y + 28) {
+        e.preventDefault(); // prevent page scroll
+        activeTouchId = t.identifier;
+        startMouseWalk(pt.x);
+      }
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+      if (activeTouchId == null || !mouseWalk.active) return;
+      const t = getTouchById(e.changedTouches || [], activeTouchId) || (e.touches && getTouchById(e.touches, activeTouchId));
+      if (!t) return;
+      const rect = canvas.getBoundingClientRect();
+      const sx = t.clientX - rect.left;
+      const sy = t.clientY - rect.top;
+      const pt = screenToScene(sx, sy);
+      mouseWalk.targetX = pt.x;
+      e.preventDefault();
+    }, { passive: false });
+    function endTouchWalk(e) {
+      if (activeTouchId == null) return;
+      const t = getTouchById(e.changedTouches || [], activeTouchId);
+      if (t) { activeTouchId = null; stopMouseWalk(); }
+    }
+    window.addEventListener('touchend', endTouchWalk, { passive: true });
+    window.addEventListener('touchcancel', endTouchWalk, { passive: true });
     canvas.addEventListener('mousemove', (e) => {
       const pt = screenToScene(e.offsetX, e.offsetY);
       const r1 = view._spawnBrandRect, r2 = view._endcapBrandRect;
