@@ -921,7 +921,7 @@
     // Branding horizontal offset relative to spawn (move image to the right)
     const BRAND_OFFSET_X = 280;
     // Spawn the avatar near the far-left limo (independent of branding position)
-    const LIMO_SPAWN_OFFSET_X = 70; // moved 50px further right from previous spawn
+    const LIMO_SPAWN_OFFSET_X = 170; // move avatar spawn further to the right
     try { player.x = (world && typeof world.minX === 'number' ? world.minX : -2000) + LIMO_SPAWN_OFFSET_X; } catch (_) {}
     // Ensure sizing applies with the now-defined view
     try { resize(); } catch (_) {}
@@ -1710,6 +1710,19 @@
         if (right < -50 || left > vw + 50) continue; // skip off-screen
         openings.push({ left, right });
       }
+      // Also block ropes where the limo sits (so it appears before the catwalk)
+      if (limoReady && limoImg && limoImg.naturalWidth) {
+        const isSmallScreenLR = (vw < 900) || (vh < 600);
+        const targetHLR = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR ? 0.22 : 0.18) * 1.6)));
+        const scaleLR = targetHLR / limoImg.naturalHeight;
+        const dwLR = Math.max(20, Math.round(limoImg.naturalWidth * scaleLR));
+        const centerWorldXLR = (world && typeof world.minX === 'number' ? world.minX : -2000);
+        const extraLeftLR = 20; // keep aligned with drawLimoLeft
+        const worldXLR = Math.floor(centerWorldXLR - dwLR / 2 - extraLeftLR);
+        const screenLeftLR = Math.floor(worldXLR - camera.x);
+        const padLR = 24;
+        openings.push({ left: screenLeftLR - padLR, right: screenLeftLR + dwLR + padLR });
+      }
 
       let prevX_rope = null;
       const OVERSCAN = 220;
@@ -1762,12 +1775,51 @@
       ctx.shadowColor = 'rgba(255,180,180,0.35)'; // Soft warm glow
       ctx.shadowBlur = 24;
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway'); // Use CSS variable
-      ctx.fillRect(-2000, y - 2, vw + 4000, 24); // Extend fully to both sides
+      // Leave a gap under the limo so it sits BEFORE the catwalk
+      if (limoReady && limoImg && limoImg.naturalWidth) {
+        const isSmallScreenLR2 = (vw < 900) || (vh < 600);
+        const targetHLR2 = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR2 ? 0.22 : 0.18) * 1.6)));
+        const scaleLR2 = targetHLR2 / limoImg.naturalHeight;
+        const dwLR2 = Math.max(20, Math.round(limoImg.naturalWidth * scaleLR2));
+        const centerWorldXLR2 = (world && typeof world.minX === 'number' ? world.minX : -2000);
+        const extraLeftLR2 = 20;
+        const worldXLR2 = Math.floor(centerWorldXLR2 - dwLR2 / 2 - extraLeftLR2);
+        const screenLeftLR2 = Math.floor(worldXLR2 - camera.x);
+        const padLR2 = 24;
+        const gapL = screenLeftLR2 - padLR2;
+        const gapR = screenLeftLR2 + dwLR2 + padLR2;
+        const fullStart = -2000;
+        const fullEnd = vw + 2000;
+        const leftStart = fullStart;
+        const leftEnd = Math.max(fullStart, Math.min(fullEnd, gapL));
+        const rightStart = Math.max(fullStart, Math.min(fullEnd, gapR));
+        const rightEnd = fullEnd;
+        if (leftEnd > leftStart) ctx.fillRect(leftStart, y - 2, leftEnd - leftStart, 24);
+        if (rightEnd > rightStart) ctx.fillRect(rightStart, y - 2, rightEnd - rightStart, 24);
+      } else {
+        ctx.fillRect(-2000, y - 2, vw + 4000, 24); // full strip when no limo computed
+      }
       ctx.shadowBlur = 0; // Reset shadow
 
       // center studs (small gold circles like carpet tacks)
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge'); // Gold
+      const studsGap = (() => {
+        if (limoReady && limoImg && limoImg.naturalWidth) {
+          const isSmallScreenLR3 = (vw < 900) || (vh < 600);
+          const targetHLR3 = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR3 ? 0.22 : 0.18) * 1.6)));
+          const scaleLR3 = targetHLR3 / limoImg.naturalHeight;
+          const dwLR3 = Math.max(20, Math.round(limoImg.naturalWidth * scaleLR3));
+          const centerWorldXLR3 = (world && typeof world.minX === 'number' ? world.minX : -2000);
+          const extraLeftLR3 = 20;
+          const worldXLR3 = Math.floor(centerWorldXLR3 - dwLR3 / 2 - extraLeftLR3);
+          const left = Math.floor(worldXLR3 - camera.x) - 24;
+          const right = left + dwLR3 + 48;
+          return { left, right, ok: true };
+        }
+        return { ok: false };
+      })();
       for (let x = -((camera.x % 80)+80) - 200; x < vw + 80 + 200; x += 80) {
+        if (studsGap.ok && x > studsGap.left && x < studsGap.right) continue;
         ctx.beginPath();
         ctx.arc(x, y + 26, 2.2, 0, Math.PI*2);
         ctx.fill();
@@ -1779,6 +1831,9 @@
     // Backstage props spanning the whole back wall (behind doors)
     function drawBackstageProps() {
       if (!(statueReady || chairReady)) return;
+      // Hide in portrait; backstage props look cramped on tall screens
+      const isPortrait = vh > vw;
+      if (isPortrait) return;
       const y = world.runwayY(); // floor baseline
       // Leave space near side curtains
       const sideMargin = 140; // keep a bit of gap from side curtains
@@ -1792,8 +1847,8 @@
       const groupScale = 0.82; // 18% tighter spacing
       const groupW = availableW * groupScale;
       const groupLeft = left + (availableW - groupW) / 2;
-      // Move them further up and enlarge
-      const baseline = Math.floor(y - 154); // moved down by another 40px
+      // Drop props by 100px to help landscape layouts on phones
+      const baseline = Math.floor(y - 54);
       for (let i = 0; i < n; i++) {
         const kind = items[i];
         const img = (kind === 'statue') ? (statueReady ? statueImg : null) : (chairReady ? chairImg : null);
@@ -1820,13 +1875,13 @@
       const scale = targetH / limoImg.naturalHeight;
       const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale));
       const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale));
-      // Shift further left: place limo center left of the catwalk edge
+      // Place limo so that its center is slightly left of the catwalk edge; positive shift moves it further off-screen
       const centerWorldX = (world && typeof world.minX === 'number' ? world.minX : -2000);
-      const extraLeft = 120; // pixels to push further off-screen to the left
+      const extraLeft = 20; // pixels to push left from the exact edge (reduced to move it right ~100px)
       const worldX = Math.floor(centerWorldX - dw / 2 - extraLeft);
       const dx = Math.floor(worldX - camera.x);
-      // Nudge up by 5px
-      const baseline = Math.floor(y + 26 + 65);
+      // Move up by 25px relative to prior; keep current natural floor contact
+      const baseline = Math.floor(y + 26 + 40);
       const dy = Math.floor(baseline - dh);
       // subtle shadow
       ctx.save();
