@@ -290,6 +290,36 @@
     loadPaparazziPair('paparazzi_left.png', 'paparazzi_right.png');
     window.setPaparazziImages = (l, r) => loadPaparazziPair(l, r);
 
+    // Stage props: Gary statues and judge chairs (drawn behind door curtains)
+    let statueImg = new Image();
+    let chairImg = new Image();
+    let statueReady = false;
+    let chairReady = false;
+    function loadStageProps(statueSrc, chairSrc) {
+      statueReady = chairReady = false;
+      statueImg.onload = () => { statueReady = true; };
+      statueImg.onerror = () => { statueReady = false; };
+      chairImg.onload = () => { chairReady = true; };
+      chairImg.onerror = () => { chairReady = false; };
+      statueImg.src = statueSrc;
+      chairImg.src = chairSrc;
+    }
+    loadStageProps('gary_statue.png', 'judge_chair.png');
+    window.setStageProps = (s, c) => loadStageProps(s, c);
+
+    // Limo image at far left of the catwalk
+    let limoImg = new Image();
+    let limoReady = false;
+    function loadLimo(src) {
+      limoReady = false;
+      limoImg = new Image();
+      limoImg.onload = () => { limoReady = true; };
+      limoImg.onerror = () => { limoReady = false; };
+      limoImg.src = src;
+    }
+    loadLimo('limo_0.png');
+    window.setLimoImage = (src) => loadLimo(src);
+
     // AVATAR SPRITE SHEET (128x128 frames)
     // Rows:
     // 0: idle right (5 frames)
@@ -349,6 +379,54 @@
       const t = performance.now() * 0.001;
       // deterministic pseudo-random helper for per-tile variance
       const rnd = (n) => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
+      // Back row disabled here; re-drawn later on top
+      if (false) {
+        let tileIndexB = 0;
+        let useLeftB = false;
+        const yTopBack = yTop + 60;         // lower on screen
+        const scaleMulBack = 1.25;          // larger size
+        const startBack = start + Math.floor(baseTile / 2) - 10; // half-tile offset, shifted 10px left
+        ctx.save();
+        ctx.globalAlpha = 0.9; // a touch dimmer
+        for (let wx = startBack; wx < end; ) {
+          const img = (useLeftB && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
+          const isLeft = (img === paparazziLeftImg);
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack;
+          const dw = Math.ceil(img.naturalWidth * scale);
+          const dh = Math.ceil(img.naturalHeight * scale);
+          const sx = Math.floor(wx - camera.x);
+          ctx.drawImage(img, sx, yTopBack, dw, dh);
+
+          // Subtler flash for back row
+          const seed = tileIndexB * 97 + (isLeft ? 3 : 5);
+          const freq = 0.8 + rnd(seed + 1) * 1.4;
+          const phase = rnd(seed + 2) * Math.PI * 2;
+          let pulse = Math.sin(t * freq + phase);
+          pulse = pulse > 0.94 ? Math.pow((pulse - 0.94) / 0.06, 2) : 0; // rarer, softer
+          if (pulse > 0) {
+            const cx = isLeft ? (sx + Math.round(dw * 0.18)) : (sx + Math.round(dw * (1 - 0.18)));
+            const cy = yTopBack + Math.round(dh * 0.16);
+            const baseInner = Math.max(6, Math.round(Math.min(dw, dh) * 0.08));
+            const rInner = Math.max(6, Math.round(baseInner * 4));
+            const rOuter = Math.max(14, Math.round(rInner * 2.0));
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rOuter);
+            let a = Math.min(0.55, 0.22 + pulse * 0.4);
+            g.addColorStop(0.0, `rgba(255,255,255,${a})`);
+            g.addColorStop(0.3, `rgba(255,255,255,${a*0.7})`);
+            g.addColorStop(1.0, 'rgba(255,255,255,0)');
+            ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+          }
+
+          wx += dw;
+          useLeftB = !useLeftB;
+          tileIndexB++;
+        }
+        ctx.restore();
+      }
+
+      // Front row (original)
       let tileIndex = 0;
       ctx.save();
       ctx.globalAlpha = 0.98;
@@ -400,6 +478,100 @@
         tileIndex++;
       }
       ctx.restore();
+
+      // Back row drawn ON TOP: lower, larger, and horizontally offset; opposite orientation start
+      {
+        let tileIndexB = 0;
+        let useLeftB = false; // start opposite to the front row
+        const yTopBack = yTop + 60;         // lower on screen (further down)
+        const scaleMulBack = 1.25;          // larger size
+        const startBack = start + Math.floor(baseTile / 2); // half-tile offset
+        ctx.save();
+        ctx.globalAlpha = 0.96; // slightly brighter since this row is on top
+        for (let wx = startBack; wx < end; ) {
+          const img = (useLeftB && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
+          const isLeft = (img === paparazziLeftImg);
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack;
+          const dw = Math.ceil(img.naturalWidth * scale);
+          const dh = Math.ceil(img.naturalHeight * scale);
+          const sx = Math.floor(wx - camera.x);
+          ctx.drawImage(img, sx, yTopBack, dw, dh);
+
+          // Subtler flash for back row
+          const seed = tileIndexB * 97 + (isLeft ? 3 : 5);
+          const freq = 0.8 + rnd(seed + 1) * 1.4;
+          const phase = rnd(seed + 2) * Math.PI * 2;
+          let pulse = Math.sin(t * freq + phase);
+          pulse = pulse > 0.94 ? Math.pow((pulse - 0.94) / 0.06, 2) : 0; // rarer, softer
+          if (pulse > 0) {
+            const cx = isLeft ? (sx + Math.round(dw * 0.18)) : (sx + Math.round(dw * (1 - 0.18)));
+            const cy = yTopBack + Math.round(dh * 0.16);
+            const baseInner = Math.max(6, Math.round(Math.min(dw, dh) * 0.08));
+            const rInner = Math.max(6, Math.round(baseInner * 4));
+            const rOuter = Math.max(14, Math.round(rInner * 2.0));
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rOuter);
+            let a = Math.min(0.55, 0.22 + pulse * 0.4);
+            g.addColorStop(0.0, `rgba(255,255,255,${a})`);
+            g.addColorStop(0.3, `rgba(255,255,255,${a*0.7})`);
+            g.addColorStop(1.0, 'rgba(255,255,255,0)');
+            ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+          }
+
+          wx += dw;
+          useLeftB = !useLeftB;
+          tileIndexB++;
+        }
+        ctx.restore();
+      }
+
+      // Fore row drawn LAST: even lower and bigger to fill the bottom
+      {
+        let tileIndexC = 0;
+        let useLeftC = false; // switch starting orientation for variety
+        const yTopFore = yTop + 110;        // drop further down
+        const scaleMulFore = 1.55;          // biggest row
+        const startFore = start + Math.floor(baseTile * 3 / 4) + 10; // new stagger
+        ctx.save();
+        ctx.globalAlpha = 0.99; // most prominent
+        for (let wx = startFore; wx < end; ) {
+          const img = (useLeftC && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
+          const isLeft = (img === paparazziLeftImg);
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulFore;
+          const dw = Math.ceil(img.naturalWidth * scale);
+          const dh = Math.ceil(img.naturalHeight * scale);
+          const sx = Math.floor(wx - camera.x);
+          ctx.drawImage(img, sx, yTopFore, dw, dh);
+
+          // Flash effect similar to front row
+          const seed = tileIndexC * 89 + (isLeft ? 7 : 11);
+          const freq = 0.8 + rnd(seed + 1) * 1.4;
+          const phase = rnd(seed + 2) * Math.PI * 2;
+          let pulse = Math.sin(t * freq + phase);
+          pulse = pulse > 0.92 ? Math.pow((pulse - 0.92) / 0.08, 2) : 0;
+          if (pulse > 0) {
+            const cx = isLeft ? (sx + Math.round(dw * 0.18)) : (sx + Math.round(dw * (1 - 0.18)));
+            const cy = yTopFore + Math.round(dh * 0.16);
+            const baseInner = Math.max(6, Math.round(Math.min(dw, dh) * 0.08));
+            const rInner = Math.max(6, Math.round(baseInner * 5));
+            const rOuter = Math.max(14, Math.round(rInner * 2.2));
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rOuter);
+            let a = Math.min(0.78, 0.28 + pulse * 0.55);
+            g.addColorStop(0.0, `rgba(255,255,255,${a})`);
+            g.addColorStop(0.3, `rgba(255,255,255,${a*0.7})`);
+            g.addColorStop(1.0, 'rgba(255,255,255,0)');
+            ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+          }
+
+          wx += dw;
+          useLeftC = !useLeftC;
+          tileIndexC++;
+        }
+        ctx.restore();
+      }
     }
 
     // Build a subtle marble texture as a repeated pattern
@@ -716,7 +888,7 @@
     };
 
     // PLAYER (blocky voxel-like avatar with normal gait)
-    const SPAWN_X = 360; // anchor for spawn area and branding placement
+    const SPAWN_X = 360; // anchor for spawn area and branding placement (branding uses this)
     const player = {
       x: SPAWN_X, y: 0, vy: 0, facing: 1, walking: false, t: 0, // position, velocity, facing, walk state, walk time
       width: 32, height: 64, // player dimensions for drawing/placement
@@ -748,8 +920,9 @@
     const CURTAIN_LIFT = 30;
     // Branding horizontal offset relative to spawn (move image to the right)
     const BRAND_OFFSET_X = 280;
-    // Ensure the avatar spawns centered on the branding image
-    try { player.x = SPAWN_X + BRAND_OFFSET_X; } catch (_) {}
+    // Spawn the avatar near the far-left limo (independent of branding position)
+    const LIMO_SPAWN_OFFSET_X = 70; // moved 50px further right from previous spawn
+    try { player.x = (world && typeof world.minX === 'number' ? world.minX : -2000) + LIMO_SPAWN_OFFSET_X; } catch (_) {}
     // Ensure sizing applies with the now-defined view
     try { resize(); } catch (_) {}
 
@@ -1603,6 +1776,66 @@
       // (rope was drawn before carpet)
     }
 
+    // Backstage props spanning the whole back wall (behind doors)
+    function drawBackstageProps() {
+      if (!(statueReady || chairReady)) return;
+      const y = world.runwayY(); // floor baseline
+      // Leave space near side curtains
+      const sideMargin = 140; // keep a bit of gap from side curtains
+      const left = -0 + sideMargin;
+      const right = vw - sideMargin;
+      if (right <= left) return;
+      const items = ['statue','chair','chair','chair','statue'];
+      const n = items.length;
+      const availableW = right - left;
+      // Pull items a bit closer together by shrinking the group width
+      const groupScale = 0.82; // 18% tighter spacing
+      const groupW = availableW * groupScale;
+      const groupLeft = left + (availableW - groupW) / 2;
+      // Move them further up and enlarge
+      const baseline = Math.floor(y - 154); // moved down by another 40px
+      for (let i = 0; i < n; i++) {
+        const kind = items[i];
+        const img = (kind === 'statue') ? (statueReady ? statueImg : null) : (chairReady ? chairImg : null);
+        if (!img) continue;
+        // Target heights tuned for balance under the valance (bigger)
+        const maxH = Math.max(60, Math.min(260, Math.round(vh * (kind === 'statue' ? 0.28 : 0.20))));
+        const scale = maxH / img.naturalHeight;
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const cx = groupLeft + ((i + 0.5) * (groupW / n));
+        const dx = Math.round(cx - w / 2);
+        const dy = Math.round(baseline - h);
+        ctx.drawImage(img, dx, dy, w, h);
+      }
+    }
+
+    // Limo at far left of the catwalk (world-anchored at world.minX)
+    function drawLimoLeft() {
+      if (!limoReady || !limoImg || !limoImg.naturalWidth) return;
+      const y = world.runwayY();
+      const isSmallScreen = (vw < 900) || (vh < 600);
+      // 60% bigger than baseline (1.6x)
+      const targetH = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreen ? 0.22 : 0.18) * 1.6)));
+      const scale = targetH / limoImg.naturalHeight;
+      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale));
+      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale));
+      // Shift further left: place limo center left of the catwalk edge
+      const centerWorldX = (world && typeof world.minX === 'number' ? world.minX : -2000);
+      const extraLeft = 120; // pixels to push further off-screen to the left
+      const worldX = Math.floor(centerWorldX - dw / 2 - extraLeft);
+      const dx = Math.floor(worldX - camera.x);
+      // Nudge up by 5px
+      const baseline = Math.floor(y + 26 + 65);
+      const dy = Math.floor(baseline - dh);
+      // subtle shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 12;
+      ctx.drawImage(limoImg, dx, dy, dw, dh);
+      ctx.restore();
+    }
+
     function drawMarquee(sec) { // Draw an interactive marquee for a section
       const y = world.runwayY(); // Base Y
       const screenX = (stage.leftOffset + sec.x) - camera.x; // Convert world X to screen X (shifted)
@@ -1622,7 +1855,7 @@
       // Title text in the header
       const goldText = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
       ctx.fillStyle = goldText;
-      ctx.font = '700 16px system-ui'; // Bold 16px
+      ctx.font = '700 20.8px system-ui'; // 30% larger than 16px
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(sec.title, screenX + sec.w/2, y - 180); // Centered label
@@ -1709,6 +1942,7 @@
         const dx = Math.floor(boxX + (boxW - dw) / 2);
         const dy = Math.floor(boxTop + (boxH - dh) / 2);
         ctx.drawImage(useImg, dx, dy, dw, dh);
+
         ctx.restore();
       }
       const centerXWorld = stage.leftOffset + sec.x + sec.w/2; // world center with stage offset
@@ -2144,10 +2378,14 @@
       
       drawCurtains();           // Big red curtains framing the stage
       drawSpotlights();         // Moving soft lights (in front of curtains)
+
+      drawRunway();             // Ground and runway
+      drawLimoLeft();           // Limo at far left edge
+      drawBackstageProps();     // Statues and chairs across the back wall
+
+      // Draw branding/billboard in front of backstage props
       drawSpawnBranding();      // Branding at spawn, stays put as you walk away
       drawEndcapBranding(ENDCAP_X); // Second branding after last door for a visual endcap
-      
-      drawRunway();             // Ground and runway
       if (window.paparazziOn !== false) drawPaparazziStrip(); // PNG robots row
       try { updatePaparazziBtnPosition(); } catch (_) {}
 
