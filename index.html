@@ -309,10 +309,13 @@
       // Screen-space vertical nudge in pixels (positive moves sprite down)
       yNudge: 10,
       seq: {
-        idleRight: { row: 0, len: 5,  fps: 6 },
-        idleLeft:  { row: 1, len: 5,  fps: 6 },
+        idleRight: { row: 0, len: 5,  fps: 3 },
+        idleLeft:  { row: 1, len: 5,  fps: 3 },
         walkRight: { row: 2, len: 11, fps: 12 },
         walkLeft:  { row: 3, len: 11, fps: 12 },
+        // New sprint rows (0-based): 4 = sprint right (19 frames), 5 = sprint left (19 frames)
+        sprintRight: { row: 4, len: 19, fps: 20 },
+        sprintLeft:  { row: 5, len: 19, fps: 20 },
       }
     };
     AVATAR.img.onload = () => { AVATAR.ready = true; };
@@ -2049,7 +2052,11 @@
       const prevKey = player.anim.key;
       let nextKey;
       if (player.walking) {
-        nextKey = (player.facing === 1) ? 'walkRight' : 'walkLeft';
+        if (keys.run && AVATAR && AVATAR.seq && (AVATAR.seq.sprintRight && AVATAR.seq.sprintLeft)) {
+          nextKey = (player.facing === 1) ? 'sprintRight' : 'sprintLeft';
+        } else {
+          nextKey = (player.facing === 1) ? 'walkRight' : 'walkLeft';
+        }
       } else {
         nextKey = (player.facing === 1) ? 'idleRight' : 'idleLeft';
       }
@@ -2172,6 +2179,26 @@
     }
     requestAnimationFrame(frame); // Kick off animation loop
   })(); // End IIFE
+  </script>
+  <!-- Background music: loops and autoplays; unmutes on first interaction -->
+  <audio id="bgAudio" src="fashion_show_song_0.wav" preload="auto" loop muted playsinline></audio>
+  <script>
+    (function () {
+      const audio = document.getElementById('bgAudio');
+      if (!audio) return;
+      const unlock = () => {
+        audio.muted = false;
+        audio.play().catch(() => {});
+        window.removeEventListener('pointerdown', unlock);
+        window.removeEventListener('keydown', unlock);
+      };
+      audio.volume = 0.6;
+      // Try to start immediately (muted). Browsers may defer until interaction.
+      audio.play().catch(() => {});
+      // Unmute and ensure playback on first interaction
+      window.addEventListener('pointerdown', unlock);
+      window.addEventListener('keydown', unlock);
+    })();
   </script>
 </body>
 </html>
