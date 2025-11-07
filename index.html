@@ -86,7 +86,9 @@
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
-    #settingsPanel #scrollWrap { position: static; width: 100%; }
+    #settingsPanel #scrollWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
+    #settingsPanel #scrollWrap .title { margin: 0; font-size: 12px; opacity: 0.9; }
+    #settingsPanel #zoomSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
     /* Remove blue tap highlight on mobile for interactive chrome */
     #controls button, .navBtn, #closeModal {
       -webkit-tap-highlight-color: transparent;
@@ -128,7 +130,7 @@
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
   <div id="scrollWrap">
-    <div class="title">Scroll Up</div>
+    <div class="title">Scroll Up &amp; Scroll Down</div>
     <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
   </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
@@ -701,7 +703,9 @@
 
     // WORLD CONFIG
     const world = {
-      width: 6000, // total catwalk length in px (world width)
+      width: 6000, // base catwalk length in px
+      minX: -2000, // extra walking room to the left (negative world space)
+      maxX: 6000,  // will be updated after sections are defined
       runwayY: () => Math.floor(vh * 0.62), // Y position of runway relative to viewport
       runwayW: () => Math.min(800, Math.max(420, vw * 0.6)), // Runway visual width
       speed: 2.2, // Base movement speed factor
@@ -719,13 +723,14 @@
     // CAMERA
     const camera = { x: 0 }; // Camera x scroll position (y is fixed by design)
     // Safe default zoom to avoid any auto-scale edge cases causing a blank scene
-    const view = { scale: 1.5, offsetX: 0, yLift: 0, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
+    const view = { scale: 1.5, offsetX: 0, yLift: 0, globalScale: 0.7, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
     // Expose quick tuning via console: setViewScale(1.2..1.6)
     window.view = view;
     if (view.baseScale == null) view.baseScale = view.scale; // store base scale
     // Paparazzi toggle (global)
     window.paparazziOn = true;
     window.setViewScale = (s) => { view.autoScale = false; view.scale = Math.max(1, Math.min(2, Number(s)||1)); };
+    window.setGlobalScale = (f) => { view.globalScale = Math.max(0.4, Math.min(1.2, Number(f)||1)); };
     // Optional: adjust horizontal nudge via console: setViewOffset(px)
     window.setViewOffset = (x) => { view.offsetX = Math.max(-200, Math.min(200, Number(x)||0)); };
     // Optional: lock/unlock landscape auto zoom and set amount
@@ -927,8 +932,13 @@
     const lastRightEdge = stage.leftOffset + Math.max.apply(null, sections.map(s => s.x + s.w));
     const TAIL_GAP = 800; // space after last door
     const ENDCAP_X = lastRightEdge + Math.floor(TAIL_GAP * 0.5); // center branding in the tail gap
-    // Ensure the world is wide enough to walk past the last door and see the endcap comfortably
-    world.width = Math.max(world.width, lastRightEdge + TAIL_GAP);
+    // Add generous walking room on both ends for future easter eggs/partners
+    const EXTRA_WALK_LEFT = 2000;
+    const EXTRA_WALK_RIGHT = 2000;
+    // Update world span
+    world.minX = -EXTRA_WALK_LEFT;
+    world.maxX = Math.max(world.width, lastRightEdge + TAIL_GAP) + EXTRA_WALK_RIGHT;
+    world.width = world.maxX; // keep legacy code that reads width functioning
 
     // INPUT
     const keys = { left: false, right: false, run: false }; // Track walking directions and run modifier
@@ -990,7 +1000,7 @@
     function updatePaparazziBtnPosition() {
       if (!paparazziBtn) return;
       if (settingsOpen) return; // controls live in settings; skip world-anchored positioning
-      const s = Number(view && view.scale) || 1;
+      const s = (Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1);
       const tx = Number(view && view._tx) || 0;
       const ty = Number(view && view._ty) || 0;
       const ox = Number(view && view.offsetX) || 0;
@@ -1051,14 +1061,15 @@
 
     // CLICKABLE DOOR HEADERS (open by clicking the marquee header)
     function screenToScene(x, y) {
-      const s = Number(view && view.scale) || 1;
+      // Use the exact scale currently applied to the canvas (view.scale * view.globalScale)
+      const s = (Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1);
       const tx = Number(view && view._tx) || 0;
       const ty = Number(view && view._ty) || 0;
       const ox = Number(view && view.offsetX) || 0;
       return { x: (x - tx) / s - ox, y: (y - ty) / s };
     }
     function sceneToScreen(x, y) {
-      const s = Number(view && view.scale) || 1;
+      const s = (Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1);
       const tx = Number(view && view._tx) || 0;
       const ty = Number(view && view._ty) || 0;
       const ox = Number(view && view.offsetX) || 0;
@@ -1496,6 +1507,19 @@
         const bleed = Math.max(400, Math.ceil((1/s - 1) * vw) + 400);
         ctx.fillRect(-bleed, y + 18, vw + bleed*2, vh - y); // Large rect covering bottom area
       }
+      // Overlay a subtle gradient and ensure it reaches the bottom edge
+      {
+        const sCombined = ((Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1));
+        const bleed2 = Math.max(400, Math.ceil((1/sCombined - 1) * vw) + 400);
+        const yTop2 = y + 12;
+        const overBottom2 = 300;
+        const g2 = ctx.createLinearGradient(0, yTop2, 0, vh + overBottom2);
+        g2.addColorStop(0.00, '#1b1b24');
+        g2.addColorStop(0.50, '#151820');
+        g2.addColorStop(1.00, '#0d0f14');
+        ctx.fillStyle = g2;
+        ctx.fillRect(-bleed2, yTop2, vw + bleed2*2, (vh + overBottom2) - yTop2);
+      }
       // Rope stanchions along the carpet sides (draw BEFORE carpet so carpet is in front)
       const postStep = 140; // distance between posts
       const topY = y - 6;   // near top edge of carpet
@@ -1512,7 +1536,8 @@
       }
 
       let prevX_rope = null;
-      for (let sx = -((camera.x % postStep) + postStep); sx < vw + postStep; sx += postStep) {
+      const OVERSCAN = 220;
+      for (let sx = -((camera.x % postStep) + postStep) - OVERSCAN; sx < vw + postStep + OVERSCAN; sx += postStep) {
         const insideOpening = openings.some(o => sx > o.left && sx < o.right);
         // Posts: small vertical poles with a gold cap
         ctx.strokeStyle = '#3a2a2a';
@@ -1561,12 +1586,12 @@
       ctx.shadowColor = 'rgba(255,180,180,0.35)'; // Soft warm glow
       ctx.shadowBlur = 24;
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway'); // Use CSS variable
-      ctx.fillRect(-1000, y - 2, vw + 2000, 24); // Extend fully to left
+      ctx.fillRect(-2000, y - 2, vw + 4000, 24); // Extend fully to both sides
       ctx.shadowBlur = 0; // Reset shadow
 
       // center studs (small gold circles like carpet tacks)
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge'); // Gold
-      for (let x = -((camera.x % 80)+80); x < vw + 80; x += 80) {
+      for (let x = -((camera.x % 80)+80) - 200; x < vw + 80 + 200; x += 80) {
         ctx.beginPath();
         ctx.arc(x, y + 26, 2.2, 0, Math.PI*2);
         ctx.fill();
@@ -2016,7 +2041,7 @@
       }
       if (keys.left)  { player.x -= world.speed * runMul * 60 * dt; player.facing = -1; player.walking = true; } // Move left
       if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
-      player.x = Math.max(0, Math.min(world.width, player.x)); // Clamp player within world bounds
+      player.x = Math.max(world.minX, Math.min(world.maxX, player.x)); // Clamp player within world bounds
       if (player.walking) player.t += dt * (keys.run ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running (doubled)
 
       // Update avatar sprite animation (idle/walk + facing)
@@ -2041,18 +2066,24 @@
       const pxNudge = (view.offsetX || 0);
       const lowerBound = player.x + pxNudge - (vw - margin.right); // min camera.x so player not off right
       const upperBound = player.x + pxNudge - margin.left;          // max camera.x so player not off left
-      // World bounds (allow slight negative to reveal the leftmost quick door fully)
-      const leftmostSecX = (function(){
-        try { return Math.min.apply(null, sections.map(s => stage.leftOffset + s.x)); } catch(_) { return 0; }
-      })();
-      const worldMin = Math.min(0, leftmostSecX - 80); // allow up to ~80px beyond the first item
-      const worldMax = Math.max(0, world.width - vw);
+      // World bounds for camera, using extended walk space
+      const worldMin = world.minX;
+      const worldMax = Math.max(0, world.maxX - vw);
       // Valid camera range intersection
       const camMin = Math.max(worldMin, lowerBound);
       const camMax = Math.min(worldMax, upperBound);
       // Clamp target into valid range
-      const target = Math.max(camMin, Math.min(camMax, baseTarget));
+      let target = Math.max(camMin, Math.min(camMax, baseTarget));
       camera.x += (target - camera.x) * 0.12; // Ease camera towards target
+      // Hard-ensure player remains within on-screen margins after easing
+      const playerScreenX = player.x - camera.x;
+      if (playerScreenX < margin.left) {
+        camera.x = player.x - margin.left;
+      } else if (playerScreenX > (vw - margin.right)) {
+        camera.x = player.x - (vw - margin.right);
+      }
+      // Clamp to world bounds
+      camera.x = Math.max(worldMin, Math.min(worldMax, camera.x));
     }
 
     let last = performance.now(); // Timestamp of previous frame
@@ -2069,8 +2100,10 @@
 
       // Apply view zoom (uniform scale) with slight upward bias on zoom-out
       const baseScale = Number(view.baseScale) || 1.5;
-      const s = Number(view.scale) > 0 ? Number(view.scale) : baseScale;
-      const minS = Number(window.zoomMinScale || 0.6);
+      const s0 = Number(view.scale) > 0 ? Number(view.scale) : baseScale;
+      const g = Number(view.globalScale) > 0 ? Number(view.globalScale) : 1;
+      const s = s0 * g; // apply global scale-down (e.g., 0.7 for ~30% smaller)
+      const minS = (Number(window.zoomMinScale || 0.6)) * g;
       const xAnchor = vw * 0.5;           // anchor horizontally at screen center
       const yAnchor = world.runwayY();    // anchor vertically at runway
       const tx = xAnchor * (1 - s);
@@ -2089,12 +2122,14 @@
 
       // ambient background with subtle marble texture
       const bgCol = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#12090c';
+      const OVERSCAN = 220; // extend drawing beyond edges to avoid slivers at 100% zoom
       ctx.fillStyle = bgCol;
-      ctx.fillRect(0, 0, vw, vh);
+      ctx.fillRect(-OVERSCAN, -OVERSCAN, vw + OVERSCAN*2, vh + OVERSCAN*2);
       if (marbleTex) {
         ctx.save();
         ctx.globalAlpha = 0.55; // slightly stronger to keep marble visible
-        ctx.drawImage(marbleTex, 0, 0, vw, vh); // single, seamless texture
+        // Draw with overscan so edges never reveal gaps
+        ctx.drawImage(marbleTex, -OVERSCAN, -OVERSCAN, vw + OVERSCAN*2, vh + OVERSCAN*2);
         ctx.restore();
       }
 
