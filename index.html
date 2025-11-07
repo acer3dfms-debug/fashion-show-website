@@ -86,9 +86,9 @@
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
-    #settingsPanel #scrollWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
-    #settingsPanel #scrollWrap .title { margin: 0; font-size: 12px; opacity: 0.9; }
-    #settingsPanel #zoomSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
+    #settingsPanel #scrollWrap, #settingsPanel #musicWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
+    #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
+    #settingsPanel #zoomSlider, #settingsPanel #musicSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
     /* Remove blue tap highlight on mobile for interactive chrome */
     #controls button, .navBtn, #closeModal {
       -webkit-tap-highlight-color: transparent;
@@ -132,6 +132,10 @@
   <div id="scrollWrap">
     <div class="title">Scroll Up &amp; Scroll Down</div>
     <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
+  </div>
+  <div id="musicWrap" style="display:none;">
+    <div class="title">Music Volume <span id="musicLabel"></span></div>
+    <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
@@ -335,7 +339,7 @@
       // Increase if feet appear to hover; decrease if they sink into the carpet.
       footInset: 16, // nudged up from 10 to drop avatar slightly
       // Overall size multiplier applied after viewport-based target height
-      sizeMul: 0.7, // 30% smaller
+      sizeMul: 0.847, // another +10% (feet remain anchored)
       // Screen-space vertical nudge in pixels (positive moves sprite down)
       yNudge: 10,
       seq: {
@@ -918,8 +922,9 @@
     const stage = { leftOffset: 600 };
     // Raise the top valance a bit (in pixels). Increase to move it up more.
     const CURTAIN_LIFT = 30;
-    // Branding horizontal offset relative to spawn (move image to the right)
-    const BRAND_OFFSET_X = 280;
+    // Branding horizontal offset relative to spawn
+    // Place the billboard center ~1800px to the right of the far-left world edge
+    let BRAND_OFFSET_X = (((world && typeof world.minX === 'number' ? world.minX : -2000) + 1800) - SPAWN_X);
     // Spawn the avatar near the far-left limo (independent of branding position)
     const LIMO_SPAWN_OFFSET_X = 170; // move avatar spawn further to the right
     try { player.x = (world && typeof world.minX === 'number' ? world.minX : -2000) + LIMO_SPAWN_OFFSET_X; } catch (_) {}
@@ -1104,6 +1109,23 @@
       }
     })();
 
+    // Reflow door positions so billboard appears first, then Quick Sign-Up starts
+    // 4000px to the right of the billboard, and remaining doors follow evenly spaced.
+    (function reflowDoors(){
+      try {
+        const spacing = 780;         // even spacing between door centers/anchors
+        const brandCenter = (SPAWN_X + BRAND_OFFSET_X);
+        const firstDoorOffset = 300; // px to the right of billboard center
+        if (sections[0] && sections[0].key === 'signup') {
+          sections[0].x = Math.round(brandCenter + firstDoorOffset);
+        }
+        let x = (sections[0] ? sections[0].x : (brandCenter + firstDoorOffset)) + spacing;
+        for (let i = 1; i < sections.length; i++) {
+          sections[i].x = Math.round(x);
+          x += spacing;
+        }
+      } catch(_) {}
+    })();
     // Compute a little extra world to the right of the last door and position the endcap logo
     const lastRightEdge = stage.leftOffset + Math.max.apply(null, sections.map(s => s.x + s.w));
     const TAIL_GAP = 800; // space after last door
@@ -1222,6 +1244,8 @@
       settingsPanel.style.display = 'block';
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
+      try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
     }
     function closeSettings() {
       settingsOpen = false;
@@ -1710,7 +1734,7 @@
         if (right < -50 || left > vw + 50) continue; // skip off-screen
         openings.push({ left, right });
       }
-      // Also block ropes where the limo sits (so it appears before the catwalk)
+      // Also block posts/ropes from the start up through the limo's right edge
       if (limoReady && limoImg && limoImg.naturalWidth) {
         const isSmallScreenLR = (vw < 900) || (vh < 600);
         const targetHLR = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreenLR ? 0.22 : 0.18) * 1.6)));
@@ -1721,7 +1745,9 @@
         const worldXLR = Math.floor(centerWorldXLR - dwLR / 2 - extraLeftLR);
         const screenLeftLR = Math.floor(worldXLR - camera.x);
         const padLR = 24;
-        openings.push({ left: screenLeftLR - padLR, right: screenLeftLR + dwLR + padLR });
+        const rightEdge = screenLeftLR + dwLR + padLR;
+        // One large opening that removes any posts/rope on or before the limo
+        openings.push({ left: -100000, right: rightEdge });
       }
 
       let prevX_rope = null;
@@ -1786,15 +1812,10 @@
         const worldXLR2 = Math.floor(centerWorldXLR2 - dwLR2 / 2 - extraLeftLR2);
         const screenLeftLR2 = Math.floor(worldXLR2 - camera.x);
         const padLR2 = 24;
-        const gapL = screenLeftLR2 - padLR2;
+        // Do NOT draw any carpet to the left of the limo; only start on the right side
         const gapR = screenLeftLR2 + dwLR2 + padLR2;
-        const fullStart = -2000;
-        const fullEnd = vw + 2000;
-        const leftStart = fullStart;
-        const leftEnd = Math.max(fullStart, Math.min(fullEnd, gapL));
-        const rightStart = Math.max(fullStart, Math.min(fullEnd, gapR));
-        const rightEnd = fullEnd;
-        if (leftEnd > leftStart) ctx.fillRect(leftStart, y - 2, leftEnd - leftStart, 24);
+        const rightStart = Math.max(-2000, Math.min(vw + 2000, gapR));
+        const rightEnd = vw + 2000;
         if (rightEnd > rightStart) ctx.fillRect(rightStart, y - 2, rightEnd - rightStart, 24);
       } else {
         ctx.fillRect(-2000, y - 2, vw + 4000, 24); // full strip when no limo computed
@@ -1819,11 +1840,14 @@
         return { ok: false };
       })();
       for (let x = -((camera.x % 80)+80) - 200; x < vw + 80 + 200; x += 80) {
-        if (studsGap.ok && x > studsGap.left && x < studsGap.right) continue;
+        // Skip all studs to the left of the carpet start (right edge of limo gap)
+        if (studsGap.ok && x < studsGap.right) continue;
         ctx.beginPath();
         ctx.arc(x, y + 26, 2.2, 0, Math.PI*2);
         ctx.fill();
       }
+
+      // (No special first post — all posts are uniform)
 
       // (rope was drawn before carpet)
     }
@@ -2473,28 +2497,102 @@
     requestAnimationFrame(frame); // Kick off animation loop
   })(); // End IIFE
   </script>
-  <!-- Background music: loops and autoplays; unmutes on first interaction -->
+  <!-- Background music: loops and autoplays; volume controlled via settings -->
   <audio id="bgAudio" src="fashion_show_song_0.wav" preload="auto" loop muted playsinline></audio>
   <script>
     (function () {
       const audio = document.getElementById('bgAudio');
       if (!audio) return;
+      let ctx = null, source = null, gain = null;
+      const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+      const getPct = () => {
+        const v = Number(localStorage.getItem('musicVolPct'));
+        return Number.isFinite(v) ? clamp(v, 0, 150) : 60; // default 60%
+      };
+      const ensureGraph = () => {
+        if (ctx) return;
+        try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(_) { ctx = null; }
+        // Try to build routing graph; if not possible, we will fall back to element volume
+        if (ctx) {
+          try { source = ctx.createMediaElementSource(audio); } catch(_) { source = null; }
+          try {
+            gain = ctx.createGain();
+            gain.gain.value = clamp(getPct()/100, 0, 1.5);
+            if (source) source.connect(gain);
+            gain.connect(ctx.destination);
+            // mute element's direct output to avoid double audio only if we have a routed graph
+            if (source) audio.volume = 0;
+          } catch(_) { ctx = null; gain = null; source = null; }
+        }
+        // If WebAudio not available, fallback to element volume immediately
+        if (!ctx || !gain) {
+          audio.volume = clamp(getPct()/100, 0, 1);
+        }
+      };
+      function setVolumePct(pct) {
+        pct = clamp(Number(pct)||0, 0, 150);
+        localStorage.setItem('musicVolPct', String(pct));
+        if (gain) gain.gain.value = pct/100;
+        // Always set element volume as a fallback (caps at 1.0)
+        audio.volume = Math.min(1, pct/100);
+      }
+      function wireSlider() {
+        const slider = document.getElementById('musicSlider');
+        const label = document.getElementById('musicLabel');
+        if (!slider) return;
+        slider.min = '0'; slider.max = '150'; slider.step = '1';
+        const val = getPct();
+        slider.value = String(val);
+        if (label) label.textContent = val + '%';
+        const applyVolumeFromUI = () => {
+          const v = Number(slider.value)||0;
+          if (label) label.textContent = v + '%';
+          setVolumePct(v);
+          ensureGraph();
+          if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch(_) {} }
+          // Unmute and play when volume > 0 so users hear changes immediately
+          if (v > 0) {
+            audio.muted = false;
+            // Start playback in response to this gesture
+            audio.play().catch(() => {});
+          } else {
+            // Keep audible path at 0 but also mute element for clarity
+            if (gain) gain.gain.value = 0;
+            audio.muted = true;
+          }
+        };
+        slider.addEventListener('input', applyVolumeFromUI);
+        slider.addEventListener('change', applyVolumeFromUI);
+      }
       const unlock = () => {
+        ensureGraph();
+        if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch(_) {} }
+        // Apply stored volume and unmute
+        setVolumePct(getPct());
         audio.muted = false;
         audio.play().catch(() => {});
         window.removeEventListener('pointerdown', unlock);
         window.removeEventListener('keydown', unlock);
       };
-      audio.volume = 0.6;
-      // Try to start immediately (muted). Browsers may defer until interaction.
+      // Start muted; route through Web Audio once unlocked
+      audio.volume = 0;
       audio.play().catch(() => {});
-      // Unmute and ensure playback on first interaction
       window.addEventListener('pointerdown', unlock);
       window.addEventListener('keydown', unlock);
+      // Wire slider if present and expose controls for settings
+      wireSlider();
+      window.bgAudioControls = {
+        setVolumePct,
+        getVolumePct: getPct,
+        wireSlider,
+        ensure: ensureGraph,
+        kick: () => { unlock(); }
+      };
     })();
   </script>
 </body>
 </html>
+
 
 
 
