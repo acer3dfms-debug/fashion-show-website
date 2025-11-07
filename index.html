@@ -76,6 +76,17 @@
       -webkit-user-drag: none;
       -khtml-user-select: none;
     }
+    /* Settings button and panel */
+    #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(8px); cursor: pointer; }
+    #settingsBtn:hover { background: rgba(255,255,255,0.16); }
+    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); display: none; background: rgba(20,20,28,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
+    #settingsPanel header { display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+    #settingsPanel header strong { font-size: 13px; }
+    #settingsClose { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+    #settingsContent { padding: 10px; display: grid; gap: 10px; }
+    /* When inside settings, make controls flow statically */
+    #settingsPanel #paparazziBtn { position: static; width: 100%; }
+    #settingsPanel #scrollWrap { position: static; width: 100%; }
     /* Remove blue tap highlight on mobile for interactive chrome */
     #controls button, .navBtn, #closeModal {
       -webkit-tap-highlight-color: transparent;
@@ -101,6 +112,16 @@
   <div id="legend"> <!-- Bottom-left legend with instructions -->
     <button class="legendClose" title="Dismiss" aria-label="Dismiss">×</button>
     Walk to the left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open it. Press <b>Down</b> to close.
+  </div>
+  
+  <!-- Settings launcher and panel -->
+  <button id="settingsBtn" aria-haspopup="dialog" aria-controls="settingsPanel">Settings</button>
+  <div id="settingsPanel" role="dialog" aria-modal="false" aria-label="Settings">
+    <header>
+      <strong>Settings</strong>
+      <button id="settingsClose" aria-label="Close Settings">Close</button>
+    </header>
+    <div id="settingsContent"></div>
   </div>
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
@@ -227,6 +248,19 @@
     }
     // Default filename expected alongside index.html; safe to replace at runtime
     loadDoorBackdrop('door-backdrop.png');
+
+    // Optional per-door backdrops: door-backdrop_1.png ... door-backdrop_7.png
+    const doorBackdropSet = {}; // index -> { img, ready }
+    function loadDoorBackdropSet(count) {
+      for (let i = 1; i <= count; i++) {
+        const img = new Image();
+        doorBackdropSet[i] = { img, ready: false };
+        img.onload = () => { doorBackdropSet[i].ready = true; };
+        img.onerror = () => { doorBackdropSet[i].ready = false; };
+        img.src = `door-backdrop_${i}.png`;
+      }
+    }
+    loadDoorBackdropSet(7);
     
     // Load paparazzi strip images (alternate left/right across the bottom)
     let paparazziLeftImg = new Image();
@@ -873,6 +907,15 @@
       `}
     ];
 
+    // Assign per-door backdrop indices (exclude the quick sign-up door)
+    (function assignBackdropIndexes(){
+      let idx = 0;
+      for (const sec of sections) {
+        if (sec.key === 'signup') { sec._backdropIndex = 0; continue; }
+        idx += 1; sec._backdropIndex = idx; // 1-based
+      }
+    })();
+
     // Compute a little extra world to the right of the last door and position the endcap logo
     const lastRightEdge = stage.leftOffset + Math.max.apply(null, sections.map(s => s.x + s.w));
     const TAIL_GAP = 800; // space after last door
@@ -911,6 +954,10 @@
     const paparazziBtn = document.getElementById('paparazziBtn');
     const zoomSlider = document.getElementById('zoomSlider');
     const scrollWrap = document.getElementById('scrollWrap');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsContent = document.getElementById('settingsContent');
+    let settingsOpen = false;
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     btnLeft.addEventListener('pointerdown', () => press('left', true)); // Hold left
     btnLeft.addEventListener('pointerup',   () => press('left', false)); // Release left
@@ -935,6 +982,7 @@
     }
     function updatePaparazziBtnPosition() {
       if (!paparazziBtn) return;
+      if (settingsOpen) return; // controls live in settings; skip world-anchored positioning
       const s = Number(view && view.scale) || 1;
       const tx = Number(view && view._tx) || 0;
       const ty = Number(view && view._ty) || 0;
@@ -975,6 +1023,24 @@
         view.yLift = lift;
       });
     }
+    // SETTINGS PANEL WIRES
+    function openSettings() {
+      settingsOpen = true;
+      settingsPanel.style.display = 'block';
+      try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
+    }
+    function closeSettings() {
+      settingsOpen = false;
+      settingsPanel.style.display = 'none';
+      // Keep controls inside panel; hidden when closed
+    }
+    if (settingsBtn) settingsBtn.addEventListener('click', () => { settingsOpen ? closeSettings() : openSettings(); });
+    const settingsClose = document.getElementById('settingsClose');
+    if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
+    // Hide controls by default until settings opened
+    try { paparazziBtn.style.display = 'none'; } catch(_){ }
+    try { scrollWrap.style.display = 'none'; } catch(_){ }
 
     // CLICKABLE DOOR HEADERS (open by clicking the marquee header)
     function screenToScene(x, y) {
@@ -1238,13 +1304,35 @@
 
     // TOOLTIP
     const tooltip = document.getElementById('tooltip'); // Tooltip element
-    function showTooltip(scrX, scrY, text) { // Position and show tooltip
+    function showTooltip(scrX, scrY, text, openKey) { // Position and show tooltip
       tooltip.textContent = text; // Set text
       tooltip.style.left = scrX + 'px'; // Horizontal position
       tooltip.style.top = scrY + 'px'; // Vertical position
+      if (openKey) {
+        tooltip.dataset.openKey = openKey;
+        tooltip.style.pointerEvents = 'auto';
+        tooltip.style.cursor = 'pointer';
+        tooltip.title = 'Click to open';
+      } else {
+        delete tooltip.dataset.openKey;
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.cursor = 'default';
+        tooltip.removeAttribute('title');
+      }
       tooltip.style.display = 'block'; // Make visible
     }
-    function hideTooltip() { tooltip.style.display = 'none'; } // Hide tooltip
+    function hideTooltip() {
+      tooltip.style.display = 'none';
+      delete tooltip.dataset.openKey;
+      tooltip.style.pointerEvents = 'none';
+      tooltip.style.cursor = 'default';
+      tooltip.removeAttribute('title');
+    } // Hide tooltip
+    // Click the tooltip to open its target section (if any)
+    tooltip.addEventListener('click', () => {
+      const key = tooltip.dataset.openKey;
+      if (key) { openSectionByKey(key); }
+    });
 
     // Hover tip near pointer for clickable areas (headers/branding)
     const hoverTipEl = document.getElementById('hoverTip');
@@ -1567,21 +1655,25 @@
       const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
 
       // Backdrop image behind the curtains (visible through the opening)
-      if (doorBackdropReady && doorBackdropImg && doorBackdropImg.naturalWidth) {
+      // Prefer per-door backdrop if available, otherwise fall back to the default image
+      const bi = sec._backdropIndex;
+      const setEntry = (bi && doorBackdropSet && doorBackdropSet[bi] && doorBackdropSet[bi].ready) ? doorBackdropSet[bi] : null;
+      const useImg = setEntry ? setEntry.img : (doorBackdropReady ? doorBackdropImg : null);
+      if (useImg && useImg.naturalWidth) {
         ctx.save();
         // Clip to the area between pillars and below the header
         ctx.beginPath();
         ctx.rect(boxX, boxTop, boxW, boxH);
         ctx.clip();
         // Cover-fit the image within the box, preserving aspect ratio
-        const iw = doorBackdropImg.naturalWidth;
-        const ih = doorBackdropImg.naturalHeight;
+        const iw = useImg.naturalWidth;
+        const ih = useImg.naturalHeight;
         const scale = Math.max(boxW / iw, boxH / ih);
         const dw = Math.ceil(iw * scale);
         const dh = Math.ceil(ih * scale);
         const dx = Math.floor(boxX + (boxW - dw) / 2);
         const dy = Math.floor(boxTop + (boxH - dh) / 2);
-        ctx.drawImage(doorBackdropImg, dx, dy, dw, dh);
+        ctx.drawImage(useImg, dx, dy, dw, dh);
         ctx.restore();
       }
       const centerXWorld = stage.leftOffset + sec.x + sec.w/2; // world center with stage offset
@@ -1636,7 +1728,7 @@
         const footSceneX = (player.x - camera.x) + 16; // player center column
         const footSceneY = y - 6; // just above the carpet baseline
         const pt = sceneToScreen(footSceneX, footSceneY);
-        showTooltip(Math.round(pt.x), Math.round(pt.y), 'Press Up or Enter to open');
+        showTooltip(Math.round(pt.x), Math.round(pt.y), 'Press Up or Enter to open', sec.key);
       }
     }
     
