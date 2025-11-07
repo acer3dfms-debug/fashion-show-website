@@ -882,6 +882,11 @@
 
     // INPUT
     const keys = { left: false, right: false, run: false }; // Track walking directions and run modifier
+    // Mouse steering dead zone with hysteresis (screen pixels)
+    const MOUSE_DEAD_IN = 16;  // threshold to stop when already moving
+    const MOUSE_DEAD_OUT = 28; // threshold to start moving when idle
+    // Click/hold-to-walk state (scene-space X target)
+    let mouseWalk = { active: false, targetX: null };
     window.addEventListener('keydown', e => { // Keyboard controls
       const k = e.key;
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
@@ -916,6 +921,18 @@
     btnUp.addEventListener('click', () => tryOpen()); // Tap up to open
     btnDown.addEventListener('click', () => closeModal()); // Tap down to close
     btnEnter.addEventListener('click', () => tryOpen()); // Tap to open
+    // Start/stop mouse-driven walking along the carpet
+    function startMouseWalk(targetSceneX) {
+      mouseWalk.active = true; mouseWalk.targetX = targetSceneX;
+      // Decide initial direction from player center in scene space
+      const centerScene = (player.x - camera.x) + 16;
+      const d = (targetSceneX - centerScene);
+      keys.left = d < -3; keys.right = d > 3;
+    }
+    function stopMouseWalk() {
+      mouseWalk.active = false; mouseWalk.targetX = null;
+      keys.left = false; keys.right = false;
+    }
     function updatePaparazziBtnPosition() {
       if (!paparazziBtn) return;
       const s = Number(view && view.scale) || 1;
@@ -1001,6 +1018,28 @@
       const sec = sectionHeaderAt(pt.x, pt.y);
       if (sec) { openModal(sec.title, sec.content); }
     });
+    // Click-and-walk on the red carpet (left mouse button)
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // left click only
+      if (modalWrap && modalWrap.style.display === 'grid') return;
+      const pt = screenToScene(e.offsetX, e.offsetY);
+      const y = world.runwayY();
+      // Detect clicks on/near the red carpet band
+      if (pt.y >= y - 8 && pt.y <= y + 28) {
+        // Start walking toward current mouse X in scene space
+        startMouseWalk(pt.x);
+      }
+    });
+    // While holding, update the target as the mouse moves
+    window.addEventListener('mousemove', (e) => {
+      if (!mouseWalk.active) return;
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const pt = screenToScene(sx, sy);
+      mouseWalk.targetX = pt.x; // update target; movement resolved in update()
+    });
+    window.addEventListener('mouseup', () => { if (mouseWalk.active) stopMouseWalk(); });
     canvas.addEventListener('mousemove', (e) => {
       const pt = screenToScene(e.offsetX, e.offsetY);
       const r1 = view._spawnBrandRect, r2 = view._endcapBrandRect;
@@ -1819,6 +1858,23 @@
     function update(dt) { // Update simulation for one frame
       player.walking = false; // Reset walking flag
       const runMul = keys.run ? 3.6 : 1; // Shift to run (doubled sprint speed)
+
+      // When holding mouse, continuously steer based on mouse X vs avatar center
+      if (mouseWalk.active && mouseWalk.targetX != null) {
+        const centerScene = (player.x - camera.x) + 16;
+        const d = mouseWalk.targetX - centerScene;
+        const moving = (keys.left || keys.right);
+        const thresh = moving ? MOUSE_DEAD_IN : MOUSE_DEAD_OUT;
+        if (Math.abs(d) <= thresh) {
+          // In dead zone: idle but face toward mouse side if offset exists
+          keys.left = false; keys.right = false;
+          if (d > 0) player.facing = 1; else if (d < 0) player.facing = -1;
+        } else if (d > thresh) {
+          keys.left = false; keys.right = true; player.facing = 1;
+        } else if (d < -thresh) {
+          keys.left = true; keys.right = false; player.facing = -1;
+        }
+      }
       if (keys.left)  { player.x -= world.speed * runMul * 60 * dt; player.facing = -1; player.walking = true; } // Move left
       if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
       player.x = Math.max(0, Math.min(world.width, player.x)); // Clamp player within world bounds
