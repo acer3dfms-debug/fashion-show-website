@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
+<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
 <html lang="en"> <!-- Root element with language set to English -->
 <head>
   <meta charset="utf-8" /> <!-- Use UTF-8 character encoding -->
@@ -20,26 +20,16 @@
       --ui: #ffffff;            /* General UI text color */
       --spot: rgba(255,255,255,0.06); /* Soft spotlight color */
       --modal-bg: rgba(0,0,0,0.6);    /* Dim background behind modal */
-      --popup-scale: 1;         /* Global scale for popup boxes (modal, settings); range 0.5â€“1.5 */
+      --popup-scale: 1;         /* Global scale for popup boxes (modal, settings); range 0.5–1.5 */
     }
     html, body {
       margin: 0; height: 100%; background: var(--bg); color: var(--ui); /* Full-height dark background */
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* Nice default font stack */
       overflow: hidden; /* Hide scrollbars; camera handles movement */
     }
-    #uiBar { /* Top translucent UI bar (fully disabled) */
-      position: fixed; left: 0; right: 0; top: 0; height: 0; padding: 0; z-index: 0;
-      background: transparent !important;
-      display: none !important; /* Completely hide bar and its gradient */
-      pointer-events: none;
-    }
-    #topNav, #uiBar .chip { display: none !important; }
-    #uiBar .chip { pointer-events: auto; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(8px); } /* Small pill badges */
-    /* Top navigation (click to open sections) */
-    #topNav { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; display: flex; gap: 8px; align-items: center; justify-content: center; pointer-events: auto; overflow-x: auto; max-width: 92vw; padding: 2px 6px; } /* Centered, scrollable menu */
-    #topNav::-webkit-scrollbar { display: none; } /* Hide   WebKit */
-    .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); } /* Button styling */
-    .navBtn:hover { background: rgba(255,255,255,0.18); } /* Hover state */
+    /* Keep CTA button styling used inside modals */
+    .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); }
+    .navBtn:hover { background: rgba(255,255,255,0.18); }
     #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 28px 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
     #legend .legendClose { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
     #legend .legendClose:hover { background: rgba(255,255,255,0.2); }
@@ -70,7 +60,7 @@
     #zoomSlider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
 
     /* Prevent text selection / callout on touch for on-screen controls and HUD */
-    #controls, #controls button, #uiBar, #legend, #tooltip, canvas, .navBtn {
+    #controls, #controls button, #legend, #tooltip, canvas {
       user-select: none;
       -webkit-user-select: none;
       -ms-user-select: none;
@@ -79,10 +69,10 @@
       -khtml-user-select: none;
     }
     /* Settings button and panel */
-    #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(8px); cursor: pointer; }
+    #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-size: 14px; padding: 8px 12px; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #settingsBtn:hover { background: rgba(255,255,255,0.16); }
     /* Always-visible Help button under Settings */
-    #helpBtn { position: fixed; left: 10px; top: 46px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-weight: 800; font-size: 24px; line-height: normal; padding: 6px 10px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
+    #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-weight: 700; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #helpBtn:hover { background: rgba(255,255,255,0.16); }
     #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow: auto; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); }
     #settingsPanel header { position: sticky; top: 0; z-index: 1; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: rgba(20,20,28,0.95); }
@@ -97,7 +87,8 @@
       margin: 0 auto; /* keep centered within container */
     }
     #settingsPanel header strong { font-size: 13px; }
-    #settingsClose { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+    #settingsClose, #settingsReset { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+    #settingsReset { margin-right: 6px; }
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
@@ -128,14 +119,10 @@
   </style>
 </head>
 <body> <!-- Page content -->
-  <div id="uiBar"> <!-- Top translucent bar with quick nav and badges -->
-    <nav id="topNav" aria-label="Quick Navigation"></nav> <!-- Buttons to jump to sections -->
-    <div class="chip">Fashion Show</div> <!-- Left badge text -->
-    <div class="chip">Arrows/WASD to walk &bull; &uarr;/Enter=open &bull; &darr;=close</div> <!-- Short usage hint -->
-  </div>
+  <!-- Removed top translucent UI bar and quick navigation to reduce DOM weight -->
   <div id="legend"> <!-- Bottom-left legend with instructions -->
     <button class="legendClose" title="Dismiss" aria-label="Dismiss">&times;</button>
-    Walk to the left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open it. Press <b>Down</b> to close.
+    Walk left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open. Press <b>Esc</b> or <b>Down</b> to close.
   </div>
   
   <!-- Settings launcher and panel -->
@@ -146,7 +133,10 @@
     <div class="popupInner">
       <header>
         <strong>Settings</strong>
-        <button id="settingsClose" aria-label="Close Settings">Close</button>
+        <div>
+          <button id="settingsReset" aria-label="Reset Settings" title="Reset settings to defaults">Reset</button>
+          <button id="settingsClose" aria-label="Close Settings">Close</button>
+        </div>
       </header>
       <div id="settingsContent"></div>
     </div>
@@ -193,9 +183,8 @@
   <div id="controls" aria-hidden="false"> <!-- On-screen control buttons for touch/mobile -->
     <button id="btnLeft"  title="Walk left" aria-label="Walk left">&larr;</button> <!-- Walk left -->
     <button id="btnRight" title="Walk right" aria-label="Walk right">&rarr;</button> <!-- Walk right -->
-    <button id="btnUp"    title="Open (Up)" aria-label="Open (Up)">&uarr;</button> <!-- Open section -->
-    <button id="btnDown"  title="Close (Down)" aria-label="Close (Down)">&darr;</button> <!-- Close modal -->
-    <button id="btnEnter" title="Open section" aria-label="Open (Enter)">Enter</button> <!-- Open nearest section -->
+    <button id="btnUp"    title="Open (Up/Enter)" aria-label="Open (Up/Enter)">&uarr; / Enter</button> <!-- Open section -->
+    <button id="btnSprint" title="Toggle sprint" aria-label="Toggle sprint">Sprint: Off</button> <!-- Sprint toggle -->
   </div>
 
   <script>
@@ -289,7 +278,6 @@
     // Default expected filename (place this image next to index.html)
     loadBranding('assets/images/fashion-show-branding.png');
     // Expose a setter for quick swaps via console if needed
-    window.setBrandingImage = (url) => loadBranding(url);
 
     // Load per-door backdrop image (displayed behind opening curtains)
     function loadDoorBackdrop(src) {
@@ -332,7 +320,6 @@
     }
     // Default pair (files should exist next to index.html)
     loadPaparazziPair('assets/images/paparazzi_left.png', 'assets/images/paparazzi_right.png');
-    window.setPaparazziImages = (l, r) => loadPaparazziPair(l, r);
 
     // Stage props: Gary statues and judge chairs (drawn behind door curtains)
     let statueImg = new Image();
@@ -349,7 +336,6 @@
       chairImg.src = chairSrc;
     }
     loadStageProps('assets/images/gary_statue.png', 'assets/images/judge_chair.png');
-    window.setStageProps = (s, c) => loadStageProps(s, c);
 
     // Limo image at far left of the catwalk
     let limoImg = new Image();
@@ -362,7 +348,7 @@
       limoImg.src = src;
     }
     loadLimo('assets/images/limo_0.png');
-    window.setLimoImage = (src) => loadLimo(src);
+    // Removed runtime asset swap helpers for leaner API
 
     // AVATAR SPRITE SHEET (128x128 frames)
     // Rows:
@@ -395,10 +381,7 @@
     AVATAR.img.onload = () => { AVATAR.ready = true; };
     AVATAR.img.onerror = () => { AVATAR.ready = false; };
     AVATAR.img.src = 'assets/images/avatar_sprite_sheet.png';
-    // Quick tuning from console: setAvatarFootInset(px), setAvatarScale(mult), setAvatarYNudge(px)
-    window.setAvatarFootInset = (n) => { AVATAR.footInset = Math.max(0, Math.min(AVATAR.fh, Number(n)||0)); };
-    window.setAvatarScale = (m) => { AVATAR.sizeMul = Math.max(0.5, Math.min(2, Number(m)||1)); };
-    window.setAvatarYNudge = (n) => { AVATAR.yNudge = Math.max(-200, Math.min(200, Number(n)||0)); };
+    // Console tuning helpers removed for leaner surface
 
     // Draw alternating paparazzi tiles under the runway
     function drawPaparazziStrip() {
@@ -423,52 +406,7 @@
       const t = performance.now() * 0.001;
       // deterministic pseudo-random helper for per-tile variance
       const rnd = (n) => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
-      // Back row disabled here; re-drawn later on top
-      if (false) {
-        let tileIndexB = 0;
-        let useLeftB = false;
-        const yTopBack = yTop + 60;         // lower on screen
-        const scaleMulBack = 1.25;          // larger size
-        const startBack = start + Math.floor(baseTile / 2) - 10; // half-tile offset, shifted 10px left
-        ctx.save();
-        ctx.globalAlpha = 0.9; // a touch dimmer
-        for (let wx = startBack; wx < end; ) {
-          const img = (useLeftB && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
-          const isLeft = (img === paparazziLeftImg);
-          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack * PNG_SCALE;
-          const dw = Math.ceil(img.naturalWidth * scale);
-          const dh = Math.ceil(img.naturalHeight * scale);
-          const sx = Math.floor(wx - camera.x);
-          ctx.drawImage(img, sx, yTopBack, dw, dh);
-
-          // Subtler flash for back row
-          const seed = tileIndexB * 97 + (isLeft ? 3 : 5);
-          const freq = 0.8 + rnd(seed + 1) * 1.4;
-          const phase = rnd(seed + 2) * Math.PI * 2;
-          let pulse = Math.sin(t * freq + phase);
-          pulse = pulse > 0.94 ? Math.pow((pulse - 0.94) / 0.06, 2) : 0; // rarer, softer
-          if (pulse > 0) {
-            const cx = isLeft ? (sx + Math.round(dw * 0.18)) : (sx + Math.round(dw * (1 - 0.18)));
-            const cy = yTopBack + Math.round(dh * 0.16);
-            const baseInner = Math.max(6, Math.round(Math.min(dw, dh) * 0.08));
-            const rInner = Math.max(6, Math.round(baseInner * 4));
-            const rOuter = Math.max(14, Math.round(rInner * 2.0));
-            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rOuter);
-            let a = Math.min(0.55, 0.22 + pulse * 0.4);
-            g.addColorStop(0.0, `rgba(255,255,255,${a})`);
-            g.addColorStop(0.3, `rgba(255,255,255,${a*0.7})`);
-            g.addColorStop(1.0, 'rgba(255,255,255,0)');
-            ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-          }
-
-          wx += dw;
-          useLeftB = !useLeftB;
-          tileIndexB++;
-        }
-        ctx.restore();
-      }
+      // Removed unused back row drawing
 
       // Front row (original)
       let tileIndex = 0;
@@ -489,7 +427,7 @@
         // Compute a per-tile flashing pattern
         const seed = tileIndex * 101 + (isLeft ? 1 : 2);
         const freq = 0.8 + rnd(seed + 1) * 1.4;     // 0.8..2.2 Hz
-        const phase = rnd(seed + 2) * Math.PI * 2;   // 0..2Ï€
+        const phase = rnd(seed + 2) * Math.PI * 2;   // 0..2π
         // Short bright pop using a steep power curve
         let pulse = Math.sin(t * freq + phase);
         pulse = pulse > 0.92 ? Math.pow((pulse - 0.92) / 0.08, 2) : 0; // only top 8% of the wave
@@ -943,21 +881,12 @@
     const camera = { x: 0 }; // Camera x scroll position (y is fixed by design)
     // Safe default zoom to avoid any auto-scale edge cases causing a blank scene
     const view = { scale: 1.5, offsetX: 0, yLift: 0, globalScale: 0.7, autoScale: false, autoScaleLandscape: true, landscapeScale: 0.9, edgeFades: false, edgeFadesInLandscape: false }; // You can tweak with setViewScale()/setViewOffset()
-    // Expose quick tuning via console: setViewScale(1.2..1.6)
+    // Expose view only; removed console tuning helpers for a leaner API
     window.view = view;
     if (view.baseScale == null) view.baseScale = view.scale; // store base scale
     // Paparazzi toggle (global)
     window.paparazziOn = true;
-    window.setViewScale = (s) => { view.autoScale = false; view.scale = Math.max(1, Math.min(2, Number(s)||1)); };
-    window.setGlobalScale = (f) => { view.globalScale = Math.max(0.4, Math.min(1.2, Number(f)||1)); };
-    // Optional: adjust horizontal nudge via console: setViewOffset(px)
-    window.setViewOffset = (x) => { view.offsetX = Math.max(-200, Math.min(200, Number(x)||0)); };
-    // Optional: lock/unlock landscape auto zoom and set amount
-    window.setLandscapeAutoZoom = (on) => { view.autoScaleLandscape = !!on; if (on) resize(); };
-    window.setLandscapeZoom = (s) => { view.landscapeScale = Math.max(0.8, Math.min(2, Number(s)||0.9)); resize(); };
-    // Optional: toggle edge fades (disabled by default)
-    window.setEdgeFades = (on) => { view.edgeFades = !!on; };
-    window.setEdgeFadesLandscape = (on) => { view.edgeFadesInLandscape = !!on; };
+    // Removed console tuning helpers: setViewScale/setGlobalScale/setViewOffset/setLandscape*/setEdgeFades*
     // Stage layout: shift all marquees and carpet to the right to create a left entry area
     const stage = { leftOffset: 600 };
     // Raise the top valance a bit (in pixels). Increase to move it up more.
@@ -985,7 +914,7 @@
       // Quick Sign-Up door near spawn (to the left)
       { x: -615, w: 340, key: 'signup', title: 'Artist Quick Sign-Up', content: `
         <p>Show your style on the runway. Enter the raffle to become a featured artist for an upcoming monthly show.</p>
-        <h4>What youâ€™ll make</h4>
+        <h4>What you’ll make</h4>
         <ul>
           <li>Full VoxEdit gear set: Headpiece, Chest, Arms, Legs</li>
           <li>Optional: Main-hand and Off-hand equipment</li>
@@ -999,8 +928,8 @@
         </ul>
         <h4>Timeline</h4>
         <ul>
-          <li>Theme drop â†’ ~3 weeks to finish your gear set</li>
-          <li>Submit 3â€“5 hero images, a short description, and your display name/socials</li>
+          <li>Theme drop → ~3 weeks to finish your gear set</li>
+          <li>Submit 3–5 hero images, a short description, and your display name/socials</li>
           <li>Quick tech check before showtime</li>
         </ul>
         <h4>Ready checklist</h4>
@@ -1016,7 +945,7 @@
           <a class="navBtn" href="#" data-close>Back to Runway</a>
         </div>
       `},
-      // Door 1 â€” About This Website
+      // Door 1 — About This Website
       { x: 400, w: 360, key: 'about', title: 'The Fashion Show Website', content: `
         <p>Step onto the stage. Walk the runway and stop under a door to open a short popup about the show.</p>
         <h4>Controls</h4>
@@ -1028,7 +957,7 @@
         <h4>Quick tips</h4>
         <ul>
           <li>Works on desktop and mobile (best in Chrome/Edge/Safari/Firefox)</li>
-          <li>If keys donâ€™t respond, click the page once to give it focus</li>
+          <li>If keys don’t respond, click the page once to give it focus</li>
           <li>If layout looks off, rotate your device or hard refresh (Ctrl/Cmd + Shift + R)</li>
         </ul>
         <div class="ctaRow">
@@ -1036,16 +965,16 @@
           <a class="navBtn" href="#" data-modal="troubleshooting">Troubleshooting</a>
         </div>
       `},
-      // Door 2 â€” The Show
+      // Door 2 — The Show
       { x: 1100, w: 360, key: 'show', title: 'The Fashion Show Origin', content: `
-        <p>This show was seeded by a community grant from The Sandbox DAOâ€”funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. Weâ€™re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
+        <p>This show was seeded by a community grant from The Sandbox DAO—funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. We’re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://www.sandboxdao.com/" target="_blank" rel="noopener">Open The Sandbox DAO</a>
           <a class="navBtn" href="https://forum.sandboxdao.com/t/sandbox-fashion-show/2744" target="_blank" rel="noopener">Read the Proposal</a>
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Get Updates (Discord)</a>
         </div>
       `},
-      // Door 3 â€” How the Show Works (In The Sandbox)
+      // Door 3 — How the Show Works (In The Sandbox)
       { x: 1900, w: 360, key: 'origin', title: 'What is the Fashion Show', content: `
         <p>Each month, four featured artists present a themed gearset on a playable catwalk inside The Sandbox. Artists walk the runway for live judging, while the audience joins in from the stands.</p>
         <p>During the show, attendees earn Catwalk Coins (CWK) by exploring, dancing, and other ways. Then they spend CWK to vote for their favorite creations. Judges' scores and audience votes are tallied together to spotlight the monthly winner.</p>
@@ -1062,7 +991,7 @@
           <a class="navBtn" href="https://www.sandbox.game/en/create/game-maker/" target="_blank" rel="noopener">Get Game Maker (Build Experiences)</a>
         </div>
       `},
-      // Door 4 â€” Being an Artist on the Show
+      // Door 4 — Being an Artist on the Show
       { x: 2700, w: 360, key: 'artists', title: 'Being an Artist', content: `
         <p><strong>Build a full voxel gear set in VoxEdit and bring it to the runway.</strong></p>
         <h4>What you make</h4>
@@ -1080,7 +1009,7 @@
         <ul>
           <li>A theme is announced after the raffle.</li>
           <li>You have ~3 weeks to finish your gear set.</li>
-          <li>Deliverables: 3â€“5 hero images, short description, display name/socials (asset files for tech check).</li>
+          <li>Deliverables: 3–5 hero images, short description, display name/socials (asset files for tech check).</li>
         </ul>
         <p><strong>Need help?</strong> Join Discord for Q&amp;A, feedback, and tech checks.</p>
         <div class="ctaRow">
@@ -1089,23 +1018,23 @@
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
         </div>
       `},
-      // Door 5 â€” Judging & How to Join
+      // Door 5 — Judging & How to Join
       { x: 3500, w: 360, key: 'judging', title: 'Judging', content: `
         <p>Artists show a gearset on the live runway while a panel scores each look and the audience adds momentum.</p>
         <h4>Scoring (how winners are chosen)</h4>
-        <p><strong>Panel score (1â€“5 per judge):</strong> three judges each pick a number from 1â€“5.</p>
+        <p><strong>Panel score (1–5 per judge):</strong> three judges each pick a number from 1–5.</p>
         <p>Criteria the judges consider:</p>
         <ul>
-          <li><strong>Craft &amp; Build Quality</strong> â€” clean geometry, detail, polish</li>
-          <li><strong>Originality &amp; Concept</strong> â€” idea strength, voice, inventiveness</li>
-          <li><strong>Runway Readability &amp; Presence</strong> â€” silhouette, staging, â€œreadsâ€ at a glance</li>
-          <li><strong>Theme Fit</strong> â€” how well it matches the showâ€™s theme/prompt</li>
+          <li><strong>Craft &amp; Build Quality</strong> — clean geometry, detail, polish</li>
+          <li><strong>Originality &amp; Concept</strong> — idea strength, voice, inventiveness</li>
+          <li><strong>Runway Readability &amp; Presence</strong> — silhouette, staging, “reads” at a glance</li>
+          <li><strong>Theme Fit</strong> — how well it matches the show’s theme/prompt</li>
         </ul>
-        <p><strong>Audience bonus (0â€“1):</strong> adds 0.0 â†’ 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
+        <p><strong>Audience bonus (0–1):</strong> adds 0.0 → 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
         <small>(Scaled per show; typically requires &gt; 5,000 CWK for the full +1.0 bonus.)</small></p>
         <p><strong>Final tally</strong> = average panel score + audience bonus. Tie-breaks go to panel discussion.</p>
       `},
-      // Door 6 â€” Join the Community
+      // Door 6 — Join the Community
       { x: 4300, w: 380, key: 'community', title: 'Join the Community', content: `
         <p>Backstage passes live on Discord. Get announcements, submission windows, tech checks, WIP feedback, and post-show recaps. Meet other creators, share progress, and help shape what comes next.</p>
         <h4>What you\u2019ll find</h4>
@@ -1128,10 +1057,10 @@
           <a class="navBtn" href="#" data-modal="ask">Ask a Question</a>
         </div>
       `},
-      // Door 7 â€” Schedule & Following Along
+      // Door 7 — Schedule & Following Along
       { x: 5200, w: 380, key: 'schedule', title: 'Schedule & Following Along', content: `
-        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channelâ€”live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
-        <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during â€œFun Stream Nightsâ€ on Twitch.</p>
+        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channel—live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
+        <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during “Fun Stream Nights” on Twitch.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Follow on Twitch</a>
           <a class="navBtn" href="https://x.com/ImDream_Studio" target="_blank" rel="noopener">Follow on X</a>
@@ -1206,9 +1135,8 @@
     // Mobile buttons
     const btnLeft  = document.getElementById('btnLeft'); // Left button element
     const btnRight = document.getElementById('btnRight'); // Right button element
-    const btnUp    = document.getElementById('btnUp'); // Up/open button (will serve as Up/Enter)
-    let   btnSprint = document.getElementById('btnSprint') || document.getElementById('btnDown'); // repurpose Down as Sprint
-    const btnEnter = document.getElementById('btnEnter'); // legacy Enter button (will be hidden)
+    const btnUp    = document.getElementById('btnUp'); // Up/open button (Up/Enter)
+    const btnSprint = document.getElementById('btnSprint'); // Sprint toggle button
     const paparazziBtn = document.getElementById('paparazziBtn');
     const controlsToggleBtn = document.getElementById('controlsToggleBtn');
     const zoomSlider = document.getElementById('zoomSlider');
@@ -1242,18 +1170,6 @@
       try { btnUp.innerHTML = '&uarr; / Enter'; btnUp.title = 'Open (Up/Enter)'; } catch(_) {}
       btnUp.addEventListener('click', () => tryOpen()); // Tap to open
     }
-    // Hide legacy Enter button if present
-    if (btnEnter) { try { btnEnter.style.display = 'none'; } catch(_) {} }
-    // Repurpose Down as Sprint toggle when btnSprint not already present
-    if (btnSprint && !document.getElementById('btnSprint')) {
-      try {
-        btnSprint.id = 'btnSprint';
-        btnSprint.textContent = 'Sprint: Off';
-        btnSprint.setAttribute('aria-pressed','false');
-        btnSprint.setAttribute('title','Toggle sprint');
-        btnSprint.setAttribute('aria-label','Toggle sprint');
-      } catch(_) {}
-    }
     if (btnSprint) {
       btnSprint.addEventListener('click', () => {
         keys.runToggle = !keys.runToggle; // persistent toggle
@@ -1273,40 +1189,7 @@
       mouseWalk.active = false; mouseWalk.targetX = null;
       keys.left = false; keys.right = false;
     }
-    function updatePaparazziBtnPosition() {
-      if (!paparazziBtn) return;
-      if (settingsOpen) return; // controls live in settings; skip world-anchored positioning
-      const s = (Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1);
-      const tx = Number(view && view._tx) || 0;
-      const ty = Number(view && view._ty) || 0;
-      const ox = Number(view && view.offsetX) || 0;
-      // Place 120px to the right of the spawn avatar and 40px below the runway baseline
-      const sx = (SPAWN_X + 120 - camera.x + ox) * s + tx;
-      const sy = (world.runwayY() + 40) * s + ty; // slightly below avatar feet
-      paparazziBtn.style.left = Math.round(sx) + 'px';
-      paparazziBtn.style.top = Math.round(sy) + 'px';
-      const gap = 8;
-      let yBelow = sy + (paparazziBtn.offsetHeight || 24) + gap;
-      if (controlsToggleBtn) {
-        controlsToggleBtn.style.left = Math.round(sx) + 'px';
-        controlsToggleBtn.style.top  = Math.round(yBelow) + 'px';
-        yBelow += (controlsToggleBtn.offsetHeight || 24) + gap;
-      }
-      if (controlsSizeWrap) {
-        // Place the size slider below the scroll slider
-        const wrapX2 = sx;
-        const wrapY2 = (parseFloat(scrollWrap && scrollWrap.style.top) || (yBelow)) + ((scrollWrap && scrollWrap.offsetHeight) || 24) + gap;
-        controlsSizeWrap.style.left = Math.round(wrapX2) + 'px';
-        controlsSizeWrap.style.top  = Math.round(wrapY2) + 'px';
-      }
-      if (scrollWrap) {
-        // Place Scroll Up bubble directly below the toggle button (or paparazzi if no toggle)
-        const wrapX = sx;
-        const wrapY = yBelow;
-        scrollWrap.style.left = Math.round(wrapX) + 'px';
-        scrollWrap.style.top  = Math.round(wrapY) + 'px';
-      }
-    }
+    // World-anchored positioning removed: controls and toggles live in Settings only
     if (paparazziBtn) {
       paparazziBtn.addEventListener('click', () => {
         window.paparazziOn = !window.paparazziOn;
@@ -1347,7 +1230,7 @@
       zoomSlider.value = '0';
       view.yLift = 0;
       if (zoomLabel) zoomLabel.textContent = '0%';
-      view.autoScale = false; // ensure auto zoom doesnâ€™t fight manual lift
+      view.autoScale = false; // ensure auto zoom doesn’t fight manual lift
       zoomSlider.setAttribute('aria-label', 'Scroll Up');
       zoomSlider.addEventListener('input', () => {
         const v = Number(zoomSlider.value) || 0;
@@ -1448,22 +1331,63 @@
       settingsPanel.style.display = 'none';
       // Keep controls inside panel; hidden when closed
     }
+    function resetSettings() {
+      try {
+        // On-screen controls visibility
+        controlsOn = true;
+        try { localStorage.setItem('controlsOn', 'true'); } catch(_) {}
+        applyControlsVisible(true);
+        // Paparazzi
+        window.paparazziOn = true;
+        if (paparazziBtn) {
+          paparazziBtn.setAttribute('aria-pressed','true');
+          paparazziBtn.textContent = 'Paparazzi: On';
+        }
+        // Scroll Up (y-lift)
+        if (zoomSlider) { zoomSlider.value = '0'; }
+        if (zoomLabel) { zoomLabel.textContent = '0%'; }
+        view.yLift = 0;
+        // On-screen controls size
+        if (controlsSizeSlider) {
+          controlsSizeSlider.value = '100';
+          const lbl = document.getElementById('controlsSizeLabel');
+          if (lbl) lbl.textContent = '100%';
+          applyControlsScale(100);
+        }
+        // PNG scale
+        if (pngSizeSlider) {
+          pngSizeSlider.value = '100';
+          if (pngSizeLabel) pngSizeLabel.textContent = '100%';
+          applyPngScale(100);
+          try { localStorage.setItem('pngScalePct','100'); } catch(_) {}
+        }
+        // Popup size
+        if (popupSizeSlider) {
+          popupSizeSlider.value = '100';
+          if (popupSizeLabel) popupSizeLabel.textContent = '100%';
+          applyPopupScale(100);
+          try { localStorage.setItem('popupScalePct','100'); } catch(_) {}
+        }
+        // Music volume
+        const musicSlider = document.getElementById('musicSlider');
+        const musicLabel = document.getElementById('musicLabel');
+        if (musicSlider) musicSlider.value = '50';
+        if (musicLabel) musicLabel.textContent = '50%';
+        try {
+          if (window.bgAudioControls && window.bgAudioControls.setVolumePct) {
+            window.bgAudioControls.setVolumePct(50);
+          } else {
+            localStorage.setItem('musicVolPct','50');
+          }
+        } catch(_) {}
+      } catch(_) {}
+    }
     if (settingsBtn) settingsBtn.addEventListener('click', () => { settingsOpen ? closeSettings() : openSettings(); });
     const settingsClose = document.getElementById('settingsClose');
     if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
+    const settingsReset = document.getElementById('settingsReset');
+    if (settingsReset) settingsReset.addEventListener('click', () => resetSettings());
     // Hide controls by default until settings opened
-    // Match help button size to the Settings button for prominence
-    function sizeHelpBtn() {
-      try {
-        if (!helpBtn || !settingsBtn) return;
-        const w = settingsBtn.offsetWidth;
-        const h = settingsBtn.offsetHeight;
-        if (w > 0) helpBtn.style.width = w + 'px';
-        if (h > 0) helpBtn.style.height = Math.round(h * 2) + 'px'; // 100% taller (2x)
-      } catch(_) {}
-    }
-    sizeHelpBtn();
-    window.addEventListener('resize', sizeHelpBtn);
     if (helpBtn) helpBtn.addEventListener('click', () => {
       // Open the same modal content as the 'about' door
       try {
@@ -1622,15 +1546,15 @@
         <li><b>Rotate device:</b> try landscape on mobile</li>
         <li><b>Close other tabs:</b> free a bit of memory/CPU</li>
       </ul>
-      <h4>If Enter doesnâ€™t open doors</h4>
+      <h4>If Enter doesn’t open doors</h4>
       <ul>
         <li>Make sure the avatar is centered under the door</li>
         <li>Try the on-screen Enter button</li>
         <li>Click the page once to give it focus, then press Enter</li>
       </ul>
-      <h4>If you canâ€™t move</h4>
+      <h4>If you can’t move</h4>
       <ul>
-        <li>Click the page, then use â† / â†’ or the on-screen arrows</li>
+        <li>Click the page, then use ← / → or the on-screen arrows</li>
         <li>On mobile, tap the arrows; long-press to keep walking</li>
       </ul>
       <h4>If popups look cut off</h4>
@@ -1663,7 +1587,7 @@
         <li><strong>Credit creators.</strong> Share only work you own or have permission to post.</li>
         <li><strong>Stay on topic.</strong> Use the right channels (announcements, WIP, help, etc.).</li>
         <li><strong>No spam/scams.</strong> No ads, token shills, or unsolicited DMs.</li>
-        <li><strong>Follow staff directions.</strong> Moderatorsâ€™ decisions keep things safe and fair.</li>
+        <li><strong>Follow staff directions.</strong> Moderators’ decisions keep things safe and fair.</li>
       </ul>
       <p>Questions or issues? Open Ask a Question here or ping a mod in <code>#help-desk</code> once you join.</p>
       <div class="ctaRow">
@@ -1676,9 +1600,9 @@
       <ul>
         <li><strong>Tech or setup questions:</strong> join and post in <code>#help-desk</code>.</li>
         <li><strong>Artist logistics (raffle, deadlines, specs):</strong> ask in <code>#artist-signup</code>.</li>
-        <li><strong>Private matters or reports:</strong> DM a moderator once youâ€™re in.</li>
+        <li><strong>Private matters or reports:</strong> DM a moderator once you’re in.</li>
       </ul>
-      <p>If you donâ€™t use Discord, you can still reach us at <em>[your email here]</em>.</p>
+      <p>If you don’t use Discord, you can still reach us at <em>[your email here]</em>.</p>
       <div class="ctaRow">
         <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
         <a class="navBtn" href="#" data-close>Back</a>
@@ -1705,22 +1629,7 @@
     });
 
     // Build top navigation from sections
-    const topNav = document.getElementById('topNav'); // Nav container in top bar
-    function buildTopNav() { // Create a button per section
-      if (!topNav) return; // Safety: no-op if nav missing
-      topNav.innerHTML = ''; // Clear previous items
-      sections.forEach(sec => { // For each section, add a button
-        const btn = document.createElement('button'); // Create button element
-        btn.type = 'button'; // Explicit type to avoid form defaults
-        btn.className = 'navBtn';
-        btn.textContent = sec.title; // Button label shows section title
-        btn.addEventListener('click', () => {
-          openModal(sec.title, sec.content); // Clicking opens its modal directly
-        });
-        topNav.appendChild(btn); // Add to nav bar
-      });
-    }
-    buildTopNav(); // Build the nav at startup
+    // Removed hidden top navigation builder for lighter runtime
 
     // Legend dismiss (non-persistent: always shows again on reload)
     (function setupLegendDismiss(){
@@ -1937,7 +1846,7 @@
     function drawRunway() { // Draw runway, edges, and center stripes
       const y = world.runwayY(); // Y coordinate for runway
       const w = world.runwayW(); // Visual runway width (currently not used directly)
-      // edges (dark floor beyond runway) â€” extend beyond screen edges like curtains
+      // edges (dark floor beyond runway) — extend beyond screen edges like curtains
       ctx.fillStyle = '#1b1b24';
       {
         const s = Number(view && view.scale) > 0 ? Number(view.scale) : 1;
@@ -2104,7 +2013,7 @@
         ctx.fill();
       }
 
-      // (No special first post â€” all posts are uniform)
+      // (No special first post — all posts are uniform)
 
       // (rope was drawn before carpet)
     }
@@ -2264,7 +2173,7 @@
           ctx.globalAlpha = Math.min(1, a);
           ctx.drawImage(sprite, gx - r, gy - r);
         }
-        // Left/right edges bulbs (sparser) â€” no bottom-row bulbs to avoid clipping
+        // Left/right edges bulbs (sparser) — no bottom-row bulbs to avoid clipping
         for (let y2 = hy + 12; y2 <= hy + hh - 12; y2 += bulbSpacing * 1.05) {
           const i = Math.floor((y2 - hy) / bulbSpacing);
           const phase = i * 0.6;
@@ -2368,7 +2277,7 @@
       })();
 
       // (Removed gold tiebacks to avoid visual confusion)
-      // Instruction bubble if player is close â€” position just above the avatar's head
+      // Instruction bubble if player is close — position just above the avatar's head
       const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
       // Only show the hint when you're firmly inside the open zone
       if (d < Math.max(10, (OPEN_DISTANCE - 10))) { // a little tighter than open distance
@@ -2425,215 +2334,14 @@
         return; // sprite drawn; skip fallback
       }
 
-      // Walk cycle params
-      const cadence = 5.2;                          // steps per second-ish
-      const phase = player.t * cadence;             // phase angle
-      const gait = Math.sin(phase);
-      const bob = 0;                                // keep anchors fixed; no vertical bob
-
-      // Model proportions (in pixels)
-      const torsoW = 18, torsoH = 24;
-      const headS = 14;
-      const upperArm = 14, foreArm = 12, armT = 5;
-      const thigh = 18, shin = 18, legT = 6;
-
-      // Anchor (hips) and shoulders
-      const hips = { x: px + 16, y: baseY - 22 - bob }; // lowered ~10px to sit on carpet
-      const shoulders = { x: hips.x, y: hips.y - torsoH + 2 };
-
-      // No canvas flip; keep anchors absolutely fixed to prevent any jumping
-
-      // Helper: draw a rotated rectangle segment anchored at (ax,ay)
-      // Adds a small overlap into the parent joint to avoid gaps and draws an outline.
-      function segment(ax, ay, len, thick, angleRad, color) {
-        const overlap = 2; // pixels to bury into the parent joint to hide seams
-        ctx.save();
-        ctx.translate(ax, ay);
-        ctx.rotate(angleRad);
-        ctx.fillStyle = color;
-        ctx.fillRect(-thick/2, -overlap, thick, len + overlap);
-        // outline for consistency with head/torso
-        ctx.strokeStyle = '#101218';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(Math.round(-thick/2)+0.5, Math.round(-overlap)+0.5, thick, len + overlap);
-        ctx.restore();
-        // return end point of the segment (for chaining)
-        return {
-          x: ax + Math.sin(angleRad) * len,
-          y: ay + Math.cos(angleRad) * len,
-        };
-      }
-
-      // Determine limb angles for a normal gait
-      const thighAmp = 0.55;  // radians swing ~31Â°
-      const shinBase = 0.25;  // base knee bend
-      const armAmp = 0.45;    // arm swing ~26Â°
-
-      // Back vs front decision so we render depth correctly
-      // When gait>0, left leg forward, right back (arbitrary); draw back limb first
-      const drawBackFirst = gait > 0; // simplifies ordering
-
-      // Colors (slight depth shading for back limbs)
-      const frontCol = '#e6e9ef';
-      const backCol  = '#c9cdd6';
-      const bodyCol  = '#e9ecf3';
-      const outline  = '#101218';
-
-      // Legs
-      function drawLeg(side) { // side: -1 = left, +1 = right
-        const swing = (side === -1 ? gait : -gait);
-        const legAng = swing * thighAmp + 0.03; // single solid limb angle
-        const color = (swing < 0 ? backCol : frontCol);
-        // Compute length so ankle hits the carpet regardless of angle
-        const startX = hips.x + side*6, startY = hips.y - 2;
-        const dy = (baseY - startY);
-        const cosA = Math.max(0.6, Math.cos(legAng)); // avoid extreme lengths near 90Â°
-        const legLen = Math.max(thigh + shin - 2, dy / cosA);
-        segment(startX, startY, legLen, legT, legAng, color);
-        // no feet: legs meet the carpet directly
-      }
-
-      // Arms (counter-swing to legs)
-      function drawArm(side) { // side: -1 = left, +1 = right
-        const swing = (side === -1 ? -gait : gait);
-        const armAng = swing * armAmp - 0.1; // single solid arm angle
-        const color = (swing > 0 ? backCol : frontCol);
-        // Anchor stays fixed at torso edge; prevents any lateral 'teleporting'
-        const torsoLeft  = shoulders.x - torsoW/2;
-        const torsoRight = shoulders.x + torsoW/2;
-        const anchorX = (side === -1) ? (torsoLeft + 2) : (torsoRight - 2);
-        const anchorY = shoulders.y + 4;
-        segment(anchorX, anchorY, upperArm + foreArm, armT, armAng, color);
-      }
-
-      // Draw order: back leg, back arm, torso+head, front arm, front leg
-      if (drawBackFirst) { drawLeg(+1); drawArm(+1); } else { drawLeg(-1); drawArm(-1); }
-
-      // Torso (block)
-      ctx.save();
-      ctx.fillStyle = bodyCol;
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 1.2;
-      ctx.fillRect(shoulders.x - torsoW/2, shoulders.y, torsoW, torsoH);
-      ctx.strokeRect(shoulders.x - torsoW/2, shoulders.y, torsoW, torsoH);
-      ctx.restore();
-
-      // Head (square)
-      ctx.save();
-      ctx.fillStyle = bodyCol;
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 1.2;
-      const headX = shoulders.x - headS/2;
-      const headY = shoulders.y - headS - 4;
-      ctx.fillRect(headX, headY, headS, headS);
-      ctx.strokeRect(headX, headY, headS, headS);
-      ctx.restore();
-
-      // Front limbs on top
-      if (drawBackFirst) { drawArm(-1); drawLeg(-1); } else { drawArm(+1); drawLeg(+1); }
+      // Minimal placeholder if sprite fails (sprite-only)
+      ctx.fillStyle = '#e6e9ef';
+      ctx.fillRect(px + 8, baseY - 32, 16, 32);
+      return;
     }
+    // drawBackgroundParallax() removed (unused)
 
-    function drawBackgroundParallax() { // Rows of audience dots moving slower than foreground (parallax)
-      const yBase = world.runwayY(); // Base y near runway level
-      const rows = 3; // Number of audience rows
-      for (let r = 0; r < rows; r++) { // For each row
-        const rowY = yBase - 50 - r*26; // Higher for further rows
-        const density = 0.002 * (r+1); // More sparse further back
-        for (let x = -100; x < vw + 100; x += 12) { // Across the screen
-          const wx = Math.floor((x + camera.x * (0.3 + r*0.15))); // World-ish x for randomization
-          // pseudo-random scatter using a simple LCG-like hash
-          if (((wx * 1103515245 + 12345) >>> 0) % Math.floor(1/density) === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,' + (0.12 + r*0.06) + ')'; // light dots for dark background
-            ctx.fillRect(x, rowY + ((wx>>3)%5), 2, 2); // Tiny audience dot
-          }
-        }
-      }
-    }
-
-    // FOREGROUND PAPARAZZI (blocky silhouettes with occasional camera flashes)
-    function drawPaparazziForeground(layer) {
-      const y = world.runwayY();                     // runway baseline
-      // Keep silhouettes lower in landscape so they don't sit mid-screen
-      const isLandscape = vw > vh;
-      // Position feet depending on layer: 'back' sits further down and dimmer; default is foreground
-      const footBase = (layer === 'back')
-        ? (isLandscape ? (vh - 120) : (vh - 220))
-        : (isLandscape ? (vh - 50) : (vh - 160));
-      const t = performance.now() * 0.001;
-      const spacing = layer === 'back' ? 260 : 220;          // base spacing; back row a bit wider
-      const rx = layer === 'back' ? 140 : 180, ry = 36;      // flash halo size
-
-      // simple deterministic pseudo-random
-      const rnd = (n) => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
-
-      for (let pass = 0; pass < 2; pass++) { // second pass doubles count
-        const xOffset = pass ? spacing / 2 : 0;   // stagger horizontally
-        const yDrop   = 0;                         // keep feet aligned at the bottom
-        // Iterate over world-space positions so figures are stationary in the world
-        const worldStart = Math.floor((camera.x - 160) / spacing) * spacing;
-        const worldEnd = camera.x + vw + 160;
-        for (let wx = worldStart; wx < worldEnd; wx += spacing) {
-          const cell = Math.floor((wx + xOffset) / spacing) + pass * 997;
-          const seed = cell * 918273 + 13579;
-          const jitter = (rnd(seed) - 0.5) * 80; // +/- 40px in screen space
-          const rawH = 72 + Math.floor(rnd(seed + 1) * 44); // 72..116
-          const w = 22 + Math.floor(rnd(seed + 2) * 10); // 22..32
-          const sx = Math.floor((wx - camera.x) + xOffset + jitter);
-          const footY = footBase + yDrop;
-          // Ensure silhouettes never overlap the carpet: clamp height to foreground space
-          const maxH = Math.max(24, footY - (y + 48));
-          const h = Math.min(rawH, maxH);
-
-          // Silhouette body (blocky / voxel-like)
-          ctx.save();
-          // compute camera/face params regardless of layer so flashes have anchors
-          const head = 16 + Math.floor(rnd(seed + 3) * 4);
-          const camW = 14, camH = 8;
-          const camY = footY - h - Math.floor(head * 0.5);
-          const faceRight = (cell % 2) === 0; // every other paparazzi faces left
-          const camX = faceRight ? (sx + w + 6) : (sx - 6 - camW);
-          if (layer !== 'back') {
-            ctx.fillStyle = 'rgba(8,10,14,0.88)';
-            // body
-            ctx.fillRect(sx, footY - h, w, h);
-            // head (square)
-            ctx.fillRect(sx + Math.floor(w/2 - head/2), footY - h - head - 2, head, head);
-            // camera box
-            ctx.fillRect(camX, camY, camW, camH);
-            // lens nub
-            if (faceRight) {
-              ctx.fillRect(camX + camW - 4, camY + 2, 4, 4);
-            } else {
-              ctx.fillRect(camX, camY + 2, 4, 4);
-            }
-            // arm to camera
-            if (faceRight) {
-              ctx.fillRect(sx + w - 3, camY + 2, 6, 6);
-            } else {
-              ctx.fillRect(sx - 3, camY + 2, 6, 6);
-            }
-          }
-
-          // occasional flash
-          const period = 2.5 + rnd(seed + 4) * 2.0;        // 2.5..4.5s
-          const phase = (t + rnd(seed + 5) * period) % period;
-          // paparazzi flash (softened)
-          if (phase < 0.12) {
-            const fx = faceRight ? (camX + camW) : camX;
-            const fy = camY + camH / 2;
-            const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, rx);
-            g.addColorStop(0, (layer === 'back') ? 'rgba(255,255,220,0.12)' : 'rgba(255,255,220,0.18)');
-            g.addColorStop(1, 'rgba(255,255,220,0)');
-            ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(fx, fy, rx, 0, Math.PI * 2); ctx.fill();
-            // bright sparkle
-            ctx.fillStyle = (layer === 'back') ? 'rgba(255,250,200,0.4)' : 'rgba(255,250,200,0.6)';
-            ctx.beginPath(); ctx.arc(fx, fy, layer === 'back' ? 3 : 4, 0, Math.PI * 2); ctx.fill();
-          }
-          ctx.restore();
-        }
-      }
-    }
+    // drawPaparazziForeground() removed (unused)
 
     function update(dt) { // Update simulation for one frame
       player.walking = false; // Reset walking flag
@@ -2768,7 +2476,7 @@
       drawSpawnBranding();      // Branding at spawn, stays put as you walk away
       drawEndcapBranding(ENDCAP_X); // Second branding after last door for a visual endcap
       if (window.paparazziOn !== false) drawPaparazziStrip(); // PNG robots row
-      try { updatePaparazziBtnPosition(); } catch (_) {}
+      // world-anchored positioning removed; controls live in Settings only
 
       // sections
       hideTooltip(); // Hide tooltip before possibly showing it for a nearby section
