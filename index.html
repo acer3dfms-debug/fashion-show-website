@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
+﻿<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
 <html lang="en"> <!-- Root element with language set to English -->
 <head>
   <meta charset="utf-8" /> <!-- Use UTF-8 character encoding -->
@@ -20,6 +20,7 @@
       --ui: #ffffff;            /* General UI text color */
       --spot: rgba(255,255,255,0.06); /* Soft spotlight color */
       --modal-bg: rgba(0,0,0,0.6);    /* Dim background behind modal */
+      --popup-scale: 1;         /* Global scale for popup boxes (modal, settings); range 0.5â€“1.5 */
     }
     html, body {
       margin: 0; height: 100%; background: var(--bg); color: var(--ui); /* Full-height dark background */
@@ -43,9 +44,9 @@
     #legend .legendClose { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
     #legend .legendClose:hover { background: rgba(255,255,255,0.2); }
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
-    #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(10px, -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
+    #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(calc(-100% - 12px), -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
-    #modal { width: min(720px, 92vw); max-height: 80vh; overflow: auto; background: #121219; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); } /* Modal panel */
+    #modal { width: min(720px, 92vw); max-height: 80vh; overflow: auto; background: transparent; border: 0; border-radius: 0; box-shadow: none; } /* Modal scroll container; visual chrome moved to .popupInner */
     #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; } /* Sticky modal header */
     #modal .content { padding: 16px; } /* Modal content area */
     #closeModal { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px 10px; cursor: pointer; } /* Close button */
@@ -83,17 +84,27 @@
     /* Always-visible Help button under Settings */
     #helpBtn { position: fixed; left: 10px; top: 46px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 999px; font-weight: 800; font-size: 24px; line-height: normal; padding: 6px 10px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #helpBtn:hover { background: rgba(255,255,255,0.16); }
-    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); display: none; background: rgba(20,20,28,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
-    #settingsPanel header { display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow: auto; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); }
+    #settingsPanel header { position: sticky; top: 0; z-index: 1; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: rgba(20,20,28,0.95); }
+    /* Scale the visual content (including text) of popup UIs uniformly */
+    .popupInner {
+      transform: scale(var(--popup-scale));
+      transform-origin: top center;
+      background: #121219;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      margin: 0 auto; /* keep centered within container */
+    }
     #settingsPanel header strong { font-size: 13px; }
     #settingsClose { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
     #settingsPanel #controlsToggleBtn { position: static; width: 100%; }
-    #settingsPanel #scrollWrap, #settingsPanel #musicWrap, #settingsPanel #controlsSizeWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; }
-    #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title, #settingsPanel #controlsSizeWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
-    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
+    #settingsPanel #scrollWrap, #settingsPanel #musicWrap, #settingsPanel #controlsSizeWrap, #settingsPanel #popupSizeWrap, #settingsPanel #pngSizeWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; display: block; gap: 0; }
+    #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title, #settingsPanel #controlsSizeWrap .title, #settingsPanel #popupSizeWrap .title, #settingsPanel #pngSizeWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
+    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider, #settingsPanel #popupSizeSlider, #settingsPanel #pngSizeSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
     /* Make both sliders share the same clean bar + thumb styling inside Settings */
     #settingsPanel input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
     #settingsPanel input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22); }
@@ -120,10 +131,10 @@
   <div id="uiBar"> <!-- Top translucent bar with quick nav and badges -->
     <nav id="topNav" aria-label="Quick Navigation"></nav> <!-- Buttons to jump to sections -->
     <div class="chip">Fashion Show</div> <!-- Left badge text -->
-    <div class="chip">Arrows/WASD to walk · Up/Enter=open · Down=close</div> <!-- Short usage hint -->
+    <div class="chip">Arrows/WASD to walk &bull; &uarr;/Enter=open &bull; &darr;=close</div> <!-- Short usage hint -->
   </div>
   <div id="legend"> <!-- Bottom-left legend with instructions -->
-    <button class="legendClose" title="Dismiss" aria-label="Dismiss">×</button>
+    <button class="legendClose" title="Dismiss" aria-label="Dismiss">&times;</button>
     Walk to the left or right to explore sections. Stand under a marquee and press <b>Enter</b> or <b>Up</b> to open it. Press <b>Down</b> to close.
   </div>
   
@@ -132,46 +143,58 @@
   <button id="helpBtn" title="Help" aria-label="Help">?</button>
   <button id="controlsToggleBtn" title="Toggle on-screen buttons" aria-pressed="true">On-screen Buttons: On</button>
   <div id="settingsPanel" role="dialog" aria-modal="false" aria-label="Settings">
-    <header>
-      <strong>Settings</strong>
-      <button id="settingsClose" aria-label="Close Settings">Close</button>
-    </header>
-    <div id="settingsContent"></div>
+    <div class="popupInner">
+      <header>
+        <strong>Settings</strong>
+        <button id="settingsClose" aria-label="Close Settings">Close</button>
+      </header>
+      <div id="settingsContent"></div>
+    </div>
   </div>
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
   <div id="scrollWrap">
-    <div class="title">Scroll Up &amp; Scroll Down</div>
+    <div class="title">Scroll Up &amp; Scroll Down <span id="zoomLabel"></span></div>
     <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
   </div>
   <div id="controlsSizeWrap" style="display:none;">
     <div class="title">On-screen Button Size <span id="controlsSizeLabel"></span></div>
     <input id="controlsSizeSlider" type="range" min="50" max="150" step="5" aria-label="On-screen Button Size" />
   </div>
+  <div id="popupSizeWrap" style="display:none;">
+    <div class="title">Popup Size <span id="popupSizeLabel"></span></div>
+    <input id="popupSizeSlider" type="range" min="50" max="150" step="5" aria-label="Popup Size" />
+  </div>
   <div id="musicWrap" style="display:none;">
     <div class="title">Music Volume <span id="musicLabel"></span></div>
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
+  <div id="pngSizeWrap" style="display:none;">
+    <div class="title">PNG Size <span id="pngSizeLabel"></span></div>
+    <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="PNG Size" />
+  </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
-      <header> <!-- Modal header with title and close action -->
-        <strong id="modalTitle">Section</strong> <!-- Title is filled in dynamically -->
-        <button id="closeModal" aria-label="Close">Close</button> <!-- Closes the modal -->
-      </header>
-      <div class="content" id="modalContent"> <!-- Container for section HTML content -->
-        <!-- populated dynamically -->
+      <div class="popupInner">
+        <header> <!-- Modal header with title and close action -->
+          <strong id="modalTitle">Section</strong> <!-- Title is filled in dynamically -->
+          <button id="closeModal" aria-label="Close">Close</button> <!-- Closes the modal -->
+        </header>
+        <div class="content" id="modalContent"> <!-- Container for section HTML content -->
+          <!-- populated dynamically -->
+        </div>
       </div>
     </div>
   </div>
   <canvas id="stage"></canvas> <!-- Fullscreen canvas used to draw the runway and avatar -->
 
   <div id="controls" aria-hidden="false"> <!-- On-screen control buttons for touch/mobile -->
-    <button id="btnLeft"  title="Walk left" aria-label="Walk left">◀</button> <!-- Walk left -->
-    <button id="btnRight" title="Walk right" aria-label="Walk right">▶</button> <!-- Walk right -->
-    <button id="btnUp"    title="Open (Up)" aria-label="Open (Up)">▲</button> <!-- Open section -->
-    <button id="btnDown"  title="Close (Down)" aria-label="Close (Down)">▼</button> <!-- Close modal -->
+    <button id="btnLeft"  title="Walk left" aria-label="Walk left">&larr;</button> <!-- Walk left -->
+    <button id="btnRight" title="Walk right" aria-label="Walk right">&rarr;</button> <!-- Walk right -->
+    <button id="btnUp"    title="Open (Up)" aria-label="Open (Up)">&uarr;</button> <!-- Open section -->
+    <button id="btnDown"  title="Close (Down)" aria-label="Close (Down)">&darr;</button> <!-- Close modal -->
     <button id="btnEnter" title="Open section" aria-label="Open (Enter)">Enter</button> <!-- Open nearest section -->
   </div>
 
@@ -264,7 +287,7 @@
       brandingImg.src = src;
     }
     // Default expected filename (place this image next to index.html)
-    loadBranding('fashion-show-branding.png');
+    loadBranding('assets/images/fashion-show-branding.png');
     // Expose a setter for quick swaps via console if needed
     window.setBrandingImage = (url) => loadBranding(url);
 
@@ -277,7 +300,7 @@
       doorBackdropImg.src = src;
     }
     // Default filename expected alongside index.html; safe to replace at runtime
-    loadDoorBackdrop('door-backdrop.png');
+    loadDoorBackdrop('assets/images/door-backdrop.png');
 
     // Optional per-door backdrops: door-backdrop_1.png ... door-backdrop_7.png
     const doorBackdropSet = {}; // index -> { img, ready }
@@ -287,7 +310,7 @@
         doorBackdropSet[i] = { img, ready: false };
         img.onload = () => { doorBackdropSet[i].ready = true; };
         img.onerror = () => { doorBackdropSet[i].ready = false; };
-        img.src = `door-backdrop_${i}.png`;
+        img.src = `assets/images/door-backdrop_${i}.png`;
       }
     }
     loadDoorBackdropSet(7);
@@ -308,7 +331,7 @@
       paparazziRightImg.src = rightSrc;
     }
     // Default pair (files should exist next to index.html)
-    loadPaparazziPair('paparazzi_left.png', 'paparazzi_right.png');
+    loadPaparazziPair('assets/images/paparazzi_left.png', 'assets/images/paparazzi_right.png');
     window.setPaparazziImages = (l, r) => loadPaparazziPair(l, r);
 
     // Stage props: Gary statues and judge chairs (drawn behind door curtains)
@@ -325,7 +348,7 @@
       statueImg.src = statueSrc;
       chairImg.src = chairSrc;
     }
-    loadStageProps('gary_statue.png', 'judge_chair.png');
+    loadStageProps('assets/images/gary_statue.png', 'assets/images/judge_chair.png');
     window.setStageProps = (s, c) => loadStageProps(s, c);
 
     // Limo image at far left of the catwalk
@@ -338,7 +361,7 @@
       limoImg.onerror = () => { limoReady = false; };
       limoImg.src = src;
     }
-    loadLimo('limo_0.png');
+    loadLimo('assets/images/limo_0.png');
     window.setLimoImage = (src) => loadLimo(src);
 
     // AVATAR SPRITE SHEET (128x128 frames)
@@ -371,7 +394,7 @@
     };
     AVATAR.img.onload = () => { AVATAR.ready = true; };
     AVATAR.img.onerror = () => { AVATAR.ready = false; };
-    AVATAR.img.src = 'avatar_sprite_sheet.png';
+    AVATAR.img.src = 'assets/images/avatar_sprite_sheet.png';
     // Quick tuning from console: setAvatarFootInset(px), setAvatarScale(mult), setAvatarYNudge(px)
     window.setAvatarFootInset = (n) => { AVATAR.footInset = Math.max(0, Math.min(AVATAR.fh, Number(n)||0)); };
     window.setAvatarScale = (m) => { AVATAR.sizeMul = Math.max(0.5, Math.min(2, Number(m)||1)); };
@@ -412,7 +435,7 @@
         for (let wx = startBack; wx < end; ) {
           const img = (useLeftB && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
           const isLeft = (img === paparazziLeftImg);
-          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack;
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack * PNG_SCALE;
           const dw = Math.ceil(img.naturalWidth * scale);
           const dh = Math.ceil(img.naturalHeight * scale);
           const sx = Math.floor(wx - camera.x);
@@ -455,7 +478,7 @@
       for (let wx = start; wx < end; ) {
         const img = (useLeft && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
         const isLeft = (img === paparazziLeftImg);
-        const scale = isLeft ? scaleL : scaleR;
+        const scale = (isLeft ? scaleL : scaleR) * PNG_SCALE;
         const dw = Math.ceil(img.naturalWidth * scale);
         const dh = Math.ceil(img.naturalHeight * scale);
         const sx = Math.floor(wx - camera.x);
@@ -466,7 +489,7 @@
         // Compute a per-tile flashing pattern
         const seed = tileIndex * 101 + (isLeft ? 1 : 2);
         const freq = 0.8 + rnd(seed + 1) * 1.4;     // 0.8..2.2 Hz
-        const phase = rnd(seed + 2) * Math.PI * 2;   // 0..2π
+        const phase = rnd(seed + 2) * Math.PI * 2;   // 0..2Ï€
         // Short bright pop using a steep power curve
         let pulse = Math.sin(t * freq + phase);
         pulse = pulse > 0.92 ? Math.pow((pulse - 0.92) / 0.08, 2) : 0; // only top 8% of the wave
@@ -512,7 +535,7 @@
         for (let wx = startBack; wx < end; ) {
           const img = (useLeftB && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
           const isLeft = (img === paparazziLeftImg);
-          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack;
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulBack * PNG_SCALE;
           const dw = Math.ceil(img.naturalWidth * scale);
           const dh = Math.ceil(img.naturalHeight * scale);
           const sx = Math.floor(wx - camera.x);
@@ -559,7 +582,7 @@
         for (let wx = startFore; wx < end; ) {
           const img = (useLeftC && paparazziLeftReady) ? paparazziLeftImg : (paparazziRightReady ? paparazziRightImg : paparazziLeftImg);
           const isLeft = (img === paparazziLeftImg);
-          const scale = (isLeft ? scaleL : scaleR) * scaleMulFore;
+          const scale = (isLeft ? scaleL : scaleR) * scaleMulFore * PNG_SCALE;
           const dw = Math.ceil(img.naturalWidth * scale);
           const dh = Math.ceil(img.naturalHeight * scale);
           const sx = Math.floor(wx - camera.x);
@@ -712,7 +735,7 @@
       const padAboveCarpet = 18;            // keep a gap above the carpet
       const maxW = Math.min(520, vw * 0.5);
       const maxH = Math.min(240, Math.max(60, carpetTop - padAboveCarpet - curtainTop));
-      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight);
+      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight) * PNG_SCALE;
       const dw = Math.floor(brandingImg.naturalWidth * scale);
       const dh = Math.floor(brandingImg.naturalHeight * scale);
 
@@ -813,7 +836,7 @@
       const padAboveCarpet = 18;
       const maxW = Math.min(520, vw * 0.5);
       const maxH = Math.min(240, Math.max(60, carpetTop - padAboveCarpet - curtainTop));
-      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight);
+      const scale = Math.min(maxW / brandingImg.naturalWidth, maxH / brandingImg.naturalHeight) * PNG_SCALE;
       const dw = Math.floor(brandingImg.naturalWidth * scale);
       const dh = Math.floor(brandingImg.naturalHeight * scale);
       const dx = Math.floor((endX - camera.x) - dw / 2);
@@ -962,7 +985,7 @@
       // Quick Sign-Up door near spawn (to the left)
       { x: -615, w: 340, key: 'signup', title: 'Artist Quick Sign-Up', content: `
         <p>Show your style on the runway. Enter the raffle to become a featured artist for an upcoming monthly show.</p>
-        <h4>What you’ll make</h4>
+        <h4>What youâ€™ll make</h4>
         <ul>
           <li>Full VoxEdit gear set: Headpiece, Chest, Arms, Legs</li>
           <li>Optional: Main-hand and Off-hand equipment</li>
@@ -976,8 +999,8 @@
         </ul>
         <h4>Timeline</h4>
         <ul>
-          <li>Theme drop → ~3 weeks to finish your gear set</li>
-          <li>Submit 3–5 hero images, a short description, and your display name/socials</li>
+          <li>Theme drop â†’ ~3 weeks to finish your gear set</li>
+          <li>Submit 3â€“5 hero images, a short description, and your display name/socials</li>
           <li>Quick tech check before showtime</li>
         </ul>
         <h4>Ready checklist</h4>
@@ -993,7 +1016,7 @@
           <a class="navBtn" href="#" data-close>Back to Runway</a>
         </div>
       `},
-      // Door 1 — About This Website
+      // Door 1 â€” About This Website
       { x: 400, w: 360, key: 'about', title: 'The Fashion Show Website', content: `
         <p>Step onto the stage. Walk the runway and stop under a door to open a short popup about the show.</p>
         <h4>Controls</h4>
@@ -1005,7 +1028,7 @@
         <h4>Quick tips</h4>
         <ul>
           <li>Works on desktop and mobile (best in Chrome/Edge/Safari/Firefox)</li>
-          <li>If keys don’t respond, click the page once to give it focus</li>
+          <li>If keys donâ€™t respond, click the page once to give it focus</li>
           <li>If layout looks off, rotate your device or hard refresh (Ctrl/Cmd + Shift + R)</li>
         </ul>
         <div class="ctaRow">
@@ -1013,16 +1036,16 @@
           <a class="navBtn" href="#" data-modal="troubleshooting">Troubleshooting</a>
         </div>
       `},
-      // Door 2 — The Show
+      // Door 2 â€” The Show
       { x: 1100, w: 360, key: 'show', title: 'The Fashion Show Origin', content: `
-        <p>This show was seeded by a community grant from The Sandbox DAO—funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. We’re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
+        <p>This show was seeded by a community grant from The Sandbox DAOâ€”funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. Weâ€™re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://www.sandboxdao.com/" target="_blank" rel="noopener">Open The Sandbox DAO</a>
           <a class="navBtn" href="https://forum.sandboxdao.com/t/sandbox-fashion-show/2744" target="_blank" rel="noopener">Read the Proposal</a>
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Get Updates (Discord)</a>
         </div>
       `},
-      // Door 3 — How the Show Works (In The Sandbox)
+      // Door 3 â€” How the Show Works (In The Sandbox)
       { x: 1900, w: 360, key: 'origin', title: 'What is the Fashion Show', content: `
         <p>Each month, four featured artists present a themed gearset on a playable catwalk inside The Sandbox. Artists walk the runway for live judging, while the audience joins in from the stands.</p>
         <p>During the show, attendees earn Catwalk Coins (CWK) by exploring, dancing, and other ways. Then they spend CWK to vote for their favorite creations. Judges' scores and audience votes are tallied together to spotlight the monthly winner.</p>
@@ -1039,7 +1062,7 @@
           <a class="navBtn" href="https://www.sandbox.game/en/create/game-maker/" target="_blank" rel="noopener">Get Game Maker (Build Experiences)</a>
         </div>
       `},
-      // Door 4 — Being an Artist on the Show
+      // Door 4 â€” Being an Artist on the Show
       { x: 2700, w: 360, key: 'artists', title: 'Being an Artist', content: `
         <p><strong>Build a full voxel gear set in VoxEdit and bring it to the runway.</strong></p>
         <h4>What you make</h4>
@@ -1057,7 +1080,7 @@
         <ul>
           <li>A theme is announced after the raffle.</li>
           <li>You have ~3 weeks to finish your gear set.</li>
-          <li>Deliverables: 3–5 hero images, short description, display name/socials (asset files for tech check).</li>
+          <li>Deliverables: 3â€“5 hero images, short description, display name/socials (asset files for tech check).</li>
         </ul>
         <p><strong>Need help?</strong> Join Discord for Q&amp;A, feedback, and tech checks.</p>
         <div class="ctaRow">
@@ -1066,23 +1089,23 @@
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
         </div>
       `},
-      // Door 5 — Judging & How to Join
+      // Door 5 â€” Judging & How to Join
       { x: 3500, w: 360, key: 'judging', title: 'Judging', content: `
         <p>Artists show a gearset on the live runway while a panel scores each look and the audience adds momentum.</p>
         <h4>Scoring (how winners are chosen)</h4>
-        <p><strong>Panel score (1–5 per judge):</strong> three judges each pick a number from 1–5.</p>
+        <p><strong>Panel score (1â€“5 per judge):</strong> three judges each pick a number from 1â€“5.</p>
         <p>Criteria the judges consider:</p>
         <ul>
-          <li><strong>Craft &amp; Build Quality</strong> — clean geometry, detail, polish</li>
-          <li><strong>Originality &amp; Concept</strong> — idea strength, voice, inventiveness</li>
-          <li><strong>Runway Readability &amp; Presence</strong> — silhouette, staging, “reads” at a glance</li>
-          <li><strong>Theme Fit</strong> — how well it matches the show’s theme/prompt</li>
+          <li><strong>Craft &amp; Build Quality</strong> â€” clean geometry, detail, polish</li>
+          <li><strong>Originality &amp; Concept</strong> â€” idea strength, voice, inventiveness</li>
+          <li><strong>Runway Readability &amp; Presence</strong> â€” silhouette, staging, â€œreadsâ€ at a glance</li>
+          <li><strong>Theme Fit</strong> â€” how well it matches the showâ€™s theme/prompt</li>
         </ul>
-        <p><strong>Audience bonus (0–1):</strong> adds 0.0 → 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
+        <p><strong>Audience bonus (0â€“1):</strong> adds 0.0 â†’ 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
         <small>(Scaled per show; typically requires &gt; 5,000 CWK for the full +1.0 bonus.)</small></p>
         <p><strong>Final tally</strong> = average panel score + audience bonus. Tie-breaks go to panel discussion.</p>
       `},
-      // Door 6 — Join the Community
+      // Door 6 â€” Join the Community
       { x: 4300, w: 380, key: 'community', title: 'Join the Community', content: `
         <p>Backstage passes live on Discord. Get announcements, submission windows, tech checks, WIP feedback, and post-show recaps. Meet other creators, share progress, and help shape what comes next.</p>
         <h4>What you\u2019ll find</h4>
@@ -1105,10 +1128,10 @@
           <a class="navBtn" href="#" data-modal="ask">Ask a Question</a>
         </div>
       `},
-      // Door 7 — Schedule & Following Along
+      // Door 7 â€” Schedule & Following Along
       { x: 5200, w: 380, key: 'schedule', title: 'Schedule & Following Along', content: `
-        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channel—live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
-        <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during “Fun Stream Nights” on Twitch.</p>
+        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channelâ€”live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
+        <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during â€œFun Stream Nightsâ€ on Twitch.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Follow on Twitch</a>
           <a class="navBtn" href="https://x.com/ImDream_Studio" target="_blank" rel="noopener">Follow on X</a>
@@ -1159,7 +1182,7 @@
     world.width = world.maxX; // keep legacy code that reads width functioning
 
     // INPUT
-    const keys = { left: false, right: false, run: false }; // Track walking directions and run modifier
+    const keys = { left: false, right: false, run: false, runToggle: false, shiftRun: false }; // Track walking + sprint states
     // Mouse steering dead zone with hysteresis (screen pixels)
     const MOUSE_DEAD_IN = 16;  // threshold to stop when already moving
     const MOUSE_DEAD_OUT = 28; // threshold to start moving when idle
@@ -1171,13 +1194,13 @@
       if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
       if (k === 'Enter' || k === 'ArrowUp' || k === 'w' || k === 'W') { tryOpen(); e.preventDefault(); }
       if (k === 'ArrowDown' || k === 's' || k === 'S' || k === 'Escape' || k === 'Esc') { closeModal(); e.preventDefault(); }
-      if (k === 'Shift') { keys.run = true; }
+      if (k === 'Shift') { keys.shiftRun = true; }
     });
     window.addEventListener('keyup', e => { // Stop walking when keys released
       const k = e.key;
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false; // Stop left
       if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false; // Stop right
-      if (k === 'Shift') keys.run = false; // Stop running
+      if (k === 'Shift') keys.shiftRun = false; // Release Shift sprint
     });
 
     // Mobile buttons
@@ -1189,13 +1212,20 @@
     const paparazziBtn = document.getElementById('paparazziBtn');
     const controlsToggleBtn = document.getElementById('controlsToggleBtn');
     const zoomSlider = document.getElementById('zoomSlider');
+    const zoomLabel = document.getElementById('zoomLabel');
     const scrollWrap = document.getElementById('scrollWrap');
     const controlsSizeWrap = document.getElementById('controlsSizeWrap');
     const controlsSizeSlider = document.getElementById('controlsSizeSlider');
+    const popupSizeWrap = document.getElementById('popupSizeWrap');
+    const popupSizeSlider = document.getElementById('popupSizeSlider');
+    const popupSizeLabel = document.getElementById('popupSizeLabel');
     const settingsBtn = document.getElementById('settingsBtn');
     const helpBtn = document.getElementById('helpBtn');
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsContent = document.getElementById('settingsContent');
+    const pngSizeWrap = document.getElementById('pngSizeWrap');
+    const pngSizeSlider = document.getElementById('pngSizeSlider');
+    const pngSizeLabel = document.getElementById('pngSizeLabel');
     let settingsOpen = false;
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     if (btnLeft) {
@@ -1209,7 +1239,7 @@
       btnRight.addEventListener('pointerleave',() => press('right', false)); // Stop if pointer leaves
     }
     if (btnUp) {
-      try { btnUp.textContent = '↑ / Enter'; btnUp.title = 'Open (Up/Enter)'; } catch(_) {}
+      try { btnUp.innerHTML = '&uarr; / Enter'; btnUp.title = 'Open (Up/Enter)'; } catch(_) {}
       btnUp.addEventListener('click', () => tryOpen()); // Tap to open
     }
     // Hide legacy Enter button if present
@@ -1226,9 +1256,9 @@
     }
     if (btnSprint) {
       btnSprint.addEventListener('click', () => {
-        keys.run = !keys.run;
-        btnSprint.setAttribute('aria-pressed', String(keys.run));
-        btnSprint.textContent = keys.run ? 'Sprint: On' : 'Sprint: Off';
+        keys.runToggle = !keys.runToggle; // persistent toggle
+        btnSprint.setAttribute('aria-pressed', String(keys.runToggle));
+        btnSprint.textContent = keys.runToggle ? 'Sprint: On' : 'Sprint: Off';
       });
     }
     // Start/stop mouse-driven walking along the carpet
@@ -1316,11 +1346,14 @@
       // Start with no lift (0)
       zoomSlider.value = '0';
       view.yLift = 0;
-      view.autoScale = false; // ensure auto zoom doesn’t fight manual lift
+      if (zoomLabel) zoomLabel.textContent = '0%';
+      view.autoScale = false; // ensure auto zoom doesnâ€™t fight manual lift
       zoomSlider.setAttribute('aria-label', 'Scroll Up');
       zoomSlider.addEventListener('input', () => {
-        const lift = valueToLift(Number(zoomSlider.value));
+        const v = Number(zoomSlider.value) || 0;
+        const lift = valueToLift(v);
         view.yLift = lift;
+        if (zoomLabel) zoomLabel.textContent = v + '%';
       });
     }
     // On-screen button size slider
@@ -1356,6 +1389,47 @@
         applyControlsScale(v);
       });
     }
+    // PNG size slider (affects all stage PNGs)
+    let PNG_SCALE = 1; // 0.5 .. 1.5
+    function getPngScalePct(){
+      try { return Math.max(50, Math.min(150, Number(localStorage.getItem('pngScalePct')) || 100)); } catch(_) { return 100; }
+    }
+    function applyPngScale(pct){
+      PNG_SCALE = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
+      try { document.documentElement.style.setProperty('--png-scale', String(PNG_SCALE)); } catch(_) {}
+    }
+    if (pngSizeSlider) {
+      const init = getPngScalePct();
+      pngSizeSlider.value = String(init);
+      if (pngSizeLabel) pngSizeLabel.textContent = init + '%';
+      applyPngScale(init);
+      pngSizeSlider.addEventListener('input', () => {
+        const v = Math.max(50, Math.min(150, Number(pngSizeSlider.value)||100));
+        if (pngSizeLabel) pngSizeLabel.textContent = v + '%';
+        applyPngScale(v);
+        try { localStorage.setItem('pngScalePct', String(v)); } catch(_) {}
+      });
+    }
+    // Popup size slider (affects modal and settings widths)
+    function getPopupScalePct(){
+      try { return Math.max(50, Math.min(150, Number(localStorage.getItem('popupScalePct')) || 100)); } catch(_) { return 100; }
+    }
+    function applyPopupScale(pct){
+      const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
+      try { document.documentElement.style.setProperty('--popup-scale', String(s)); } catch(_) {}
+    }
+    if (popupSizeSlider) {
+      const init = getPopupScalePct();
+      popupSizeSlider.value = String(init);
+      if (popupSizeLabel) popupSizeLabel.textContent = init + '%';
+      applyPopupScale(init);
+      popupSizeSlider.addEventListener('input', () => {
+        const v = Math.max(50, Math.min(150, Number(popupSizeSlider.value)||100));
+        if (popupSizeLabel) popupSizeLabel.textContent = v + '%';
+        applyPopupScale(v);
+        try { localStorage.setItem('popupScalePct', String(v)); } catch(_) {}
+      });
+    }
     // SETTINGS PANEL WIRES
     function openSettings() {
       settingsOpen = true;
@@ -1364,6 +1438,8 @@
       try { settingsContent.appendChild(controlsToggleBtn); controlsToggleBtn.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(controlsSizeWrap); controlsSizeWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(popupSizeWrap); popupSizeWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(pngSizeWrap); pngSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
     }
@@ -1515,8 +1591,9 @@
       const hover = overBrand || overHeader;
       canvas.style.cursor = hover ? 'pointer' : 'default';
       if (hover) {
-        const text = overBrand ? 'Fashion Show Experience Page' : 'Open “' + sec.title + '”';
-        showHoverTip(e.clientX, e.clientY, text);
+        let asHtml = overBrand;
+        let txt = overBrand ? "<img src=\"assets/images/fashion_show_experience.png\" alt=\"Fashion Show Experience\" style=\"display:block; max-width:220px; max-height:140px;\" />" : ("Open \"" + (sec && sec.title ? sec.title : "Section") + "\"");
+        showHoverTip(e.clientX, e.clientY, txt, asHtml);
       } else {
         hideHoverTip();
       }
@@ -1545,15 +1622,15 @@
         <li><b>Rotate device:</b> try landscape on mobile</li>
         <li><b>Close other tabs:</b> free a bit of memory/CPU</li>
       </ul>
-      <h4>If Enter doesn’t open doors</h4>
+      <h4>If Enter doesnâ€™t open doors</h4>
       <ul>
         <li>Make sure the avatar is centered under the door</li>
         <li>Try the on-screen Enter button</li>
         <li>Click the page once to give it focus, then press Enter</li>
       </ul>
-      <h4>If you can’t move</h4>
+      <h4>If you canâ€™t move</h4>
       <ul>
-        <li>Click the page, then use ← / → or the on-screen arrows</li>
+        <li>Click the page, then use â† / â†’ or the on-screen arrows</li>
         <li>On mobile, tap the arrows; long-press to keep walking</li>
       </ul>
       <h4>If popups look cut off</h4>
@@ -1586,7 +1663,7 @@
         <li><strong>Credit creators.</strong> Share only work you own or have permission to post.</li>
         <li><strong>Stay on topic.</strong> Use the right channels (announcements, WIP, help, etc.).</li>
         <li><strong>No spam/scams.</strong> No ads, token shills, or unsolicited DMs.</li>
-        <li><strong>Follow staff directions.</strong> Moderators’ decisions keep things safe and fair.</li>
+        <li><strong>Follow staff directions.</strong> Moderatorsâ€™ decisions keep things safe and fair.</li>
       </ul>
       <p>Questions or issues? Open Ask a Question here or ping a mod in <code>#help-desk</code> once you join.</p>
       <div class="ctaRow">
@@ -1599,9 +1676,9 @@
       <ul>
         <li><strong>Tech or setup questions:</strong> join and post in <code>#help-desk</code>.</li>
         <li><strong>Artist logistics (raffle, deadlines, specs):</strong> ask in <code>#artist-signup</code>.</li>
-        <li><strong>Private matters or reports:</strong> DM a moderator once you’re in.</li>
+        <li><strong>Private matters or reports:</strong> DM a moderator once youâ€™re in.</li>
       </ul>
-      <p>If you don’t use Discord, you can still reach us at <em>[your email here]</em>.</p>
+      <p>If you donâ€™t use Discord, you can still reach us at <em>[your email here]</em>.</p>
       <div class="ctaRow">
         <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
         <a class="navBtn" href="#" data-close>Back</a>
@@ -1695,9 +1772,9 @@
 
     // Hover tip near pointer for clickable areas (headers/branding)
     const hoverTipEl = document.getElementById('hoverTip');
-    function showHoverTip(scrX, scrY, text) {
+    function showHoverTip(scrX, scrY, text, asHtml) {
       if (!hoverTipEl) return;
-      hoverTipEl.textContent = text;
+      if (asHtml) hoverTipEl.innerHTML = text; else hoverTipEl.textContent = text;
       hoverTipEl.style.left = scrX + 'px';
       hoverTipEl.style.top = scrY + 'px';
       hoverTipEl.style.display = 'block';
@@ -1860,7 +1937,7 @@
     function drawRunway() { // Draw runway, edges, and center stripes
       const y = world.runwayY(); // Y coordinate for runway
       const w = world.runwayW(); // Visual runway width (currently not used directly)
-      // edges (dark floor beyond runway) — extend beyond screen edges like curtains
+      // edges (dark floor beyond runway) â€” extend beyond screen edges like curtains
       ctx.fillStyle = '#1b1b24';
       {
         const s = Number(view && view.scale) > 0 ? Number(view.scale) : 1;
@@ -2027,7 +2104,7 @@
         ctx.fill();
       }
 
-      // (No special first post — all posts are uniform)
+      // (No special first post â€” all posts are uniform)
 
       // (rope was drawn before carpet)
     }
@@ -2060,8 +2137,8 @@
         // Target heights tuned for balance under the valance (bigger)
         const maxH = Math.max(60, Math.min(260, Math.round(vh * (kind === 'statue' ? 0.28 : 0.20))));
         const scale = maxH / img.naturalHeight;
-        const w = Math.max(1, Math.round(img.naturalWidth * scale));
-        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale * PNG_SCALE));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale * PNG_SCALE));
         const cx = groupLeft + ((i + 0.5) * (groupW / n));
         const dx = Math.round(cx - w / 2);
         const dy = Math.round(baseline - h);
@@ -2077,8 +2154,8 @@
       // 60% bigger than baseline (1.6x)
       const targetH = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreen ? 0.22 : 0.18) * 1.6)));
       const scale = targetH / limoImg.naturalHeight;
-      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale));
-      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale));
+      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale * PNG_SCALE));
+      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale * PNG_SCALE));
       // Place limo so that its center is slightly left of the catwalk edge; positive shift moves it further off-screen
       const centerWorldX = (world && typeof world.minX === 'number' ? world.minX : -2000);
       const extraLeft = 20; // pixels to push left from the exact edge (reduced to move it right ~100px)
@@ -2105,8 +2182,8 @@
       // Same scale as left limo
       const targetH = Math.min(448, Math.max(80, Math.floor(vh * (isSmallScreen ? 0.22 : 0.18) * 1.6)));
       const scale = targetH / limoImg.naturalHeight;
-      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale));
-      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale));
+      const dw = Math.max(20, Math.round(limoImg.naturalWidth * scale * PNG_SCALE));
+      const dh = Math.max(20, Math.round(limoImg.naturalHeight * scale * PNG_SCALE));
       // Anchor at the far-right world edge
       const centerWorldX = (world && typeof world.maxX === 'number' ? world.maxX : 6000);
       const extraRight = 20; // push slightly further to the right
@@ -2128,39 +2205,44 @@
     function drawMarquee(sec) { // Draw an interactive marquee for a section
       const y = world.runwayY(); // Base Y
       const screenX = (stage.leftOffset + sec.x) - camera.x; // Convert world X to screen X (shifted)
+      // Link door size to PNG size slider
+      const DOOR_SCALE = Math.max(0.5, Math.min(1.5, (typeof PNG_SCALE === 'number' ? PNG_SCALE : 1)));
+      const drawW = Math.round(sec.w * DOOR_SCALE);
+      const drawX = Math.round(screenX - (drawW - sec.w) / 2); // keep door centered on its original center
       // Pillars (sides)
       ctx.fillStyle = '#2a2a36';
-      ctx.fillRect(screenX, y - 220, 18, 220); // Left pillar
-      ctx.fillRect(screenX + sec.w - 18, y - 220, 18, 220); // Right pillar
+      ctx.fillRect(drawX, y - Math.round(220 * DOOR_SCALE), 18, Math.round(220 * DOOR_SCALE)); // Left pillar
+      ctx.fillRect(drawX + drawW - 18, y - Math.round(220 * DOOR_SCALE), 18, Math.round(220 * DOOR_SCALE)); // Right pillar
       // Header panel (screen-like black box)
-      const headerTop = y - 220;
-      const headerBottom = y - 140;
+      const headerTop = y - Math.round(220 * DOOR_SCALE);
+      const headerBottom = y - Math.round(140 * DOOR_SCALE);
       // Darker, subtle gradient for the header panel (screen-like)
       const grd = ctx.createLinearGradient(0, headerTop, 0, headerBottom);
       grd.addColorStop(0, '#0d0e12'); // near-black top
       grd.addColorStop(1, '#191a22'); // very dark bottom
       ctx.fillStyle = grd;
-      ctx.fillRect(screenX + 18, headerTop, sec.w - 36, 80); // Panel between pillars
+      ctx.fillRect(drawX + 18, headerTop, drawW - 36, Math.round(80 * DOOR_SCALE)); // Panel between pillars
       // Title text in the header
       const goldText = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
       ctx.fillStyle = goldText;
-      ctx.font = '700 20.8px system-ui'; // 30% larger than 16px
+      const headerFontPx = Math.max(12, Math.round(20.8 * DOOR_SCALE));
+      ctx.font = '700 ' + headerFontPx + 'px system-ui'; // scale label with door
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(sec.title, screenX + sec.w/2, y - 180); // Centered label
+      ctx.fillText(sec.title, drawX + drawW/2, Math.round(y - 180 * DOOR_SCALE)); // Centered label
       // Accent underglow strip
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
       ctx.globalAlpha = 0.4; // Semi transparent
-      ctx.fillRect(screenX + 20, headerBottom + 2, sec.w - 40, 4); // Thin bar under header
+      ctx.fillRect(drawX + 20, headerBottom + 2, drawW - 40, 4); // Thin bar under header
       ctx.globalAlpha = 1; // Restore alpha
 
       // Flashing bulbs around clickable header panel (door button)
       (function drawHeaderLights(){
         // Round all geometry to whole pixels to avoid subpixel shimmer while panning
-        const hx = Math.round(screenX + 18); // header box x
+        const hx = Math.round(drawX + 18); // header box x
         const hy = Math.round(headerTop);    // header box y
-        const hw = Math.round(sec.w - 36);   // header box width
-        const hh = 80;                       // header box height
+        const hw = Math.round(drawW - 36);   // header box width
+        const hh = Math.round(80 * DOOR_SCALE); // header box height
         const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
         ctx.save();
         // Twinkling bulbs along the frame (no outline)
@@ -2182,7 +2264,7 @@
           ctx.globalAlpha = Math.min(1, a);
           ctx.drawImage(sprite, gx - r, gy - r);
         }
-        // Left/right edges bulbs (sparser) — no bottom-row bulbs to avoid clipping
+        // Left/right edges bulbs (sparser) â€” no bottom-row bulbs to avoid clipping
         for (let y2 = hy + 12; y2 <= hy + hh - 12; y2 += bulbSpacing * 1.05) {
           const i = Math.floor((y2 - hy) / bulbSpacing);
           const phase = i * 0.6;
@@ -2202,13 +2284,15 @@
 
       // Entrance curtains per section: fully open at center, close as you walk away
       const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f1cf63';
-      const boxX = screenX + 18; const boxW = sec.w - 36; // between the pillars
+      const boxX = drawX + 18; const boxW = drawW - 36; // between the pillars
       // Taller curtains only on mobile landscape so header text is covered there,
       // but keep desktop browsers at the original height.
       const isMobileLandscape = (vw > vh) && IS_TOUCH;
       // Keep curtains above the red carpet (stop right at carpet top)
       const curtainBottomY = Math.floor(world.runwayY() - 2);
-      const boxTop = headerBottom; // attach directly to header bottom regardless of zoom
+      // Overlap the header slightly so curtains cover the seam, but sit a bit lower
+      const CURTAIN_OVERLAP = 12; // pixels into header area (reduced to lower curtains)
+      const boxTop = headerBottom - CURTAIN_OVERLAP; // raise top a bit into the header
       const boxH = Math.max(12, curtainBottomY - boxTop); // extend down to carpet edge
 
       // Backdrop image behind the curtains (visible through the opening)
@@ -2218,19 +2302,25 @@
       const useImg = setEntry ? setEntry.img : (doorBackdropReady ? doorBackdropImg : null);
       if (useImg && useImg.naturalWidth) {
         ctx.save();
-        // Clip to the area between pillars and below the header
+        // Clip to the area between pillars; align the top exactly to the curtain top
+        // so the backdrop image overlaps up to the seam and no gap is visible
         ctx.beginPath();
-        ctx.rect(boxX, boxTop, boxW, boxH);
+        const CLIP_TOP = Math.floor(boxTop); // align with curtain top to avoid visible gap
+        const CLIP_H = Math.max(1, curtainBottomY - CLIP_TOP);
+        ctx.rect(boxX, CLIP_TOP, boxW, CLIP_H);
         ctx.clip();
         // Cover-fit the image within the box, preserving aspect ratio
         const iw = useImg.naturalWidth;
         const ih = useImg.naturalHeight;
-        const scale = Math.max(boxW / iw, boxH / ih);
+        const baseScale = Math.max(boxW / iw, boxH / ih);
+        const scale = baseScale * Math.max(1, PNG_SCALE);
         const dw = Math.ceil(iw * scale);
         const dh = Math.ceil(ih * scale);
         const dx = Math.floor(boxX + (boxW - dw) / 2);
         const dy = Math.floor(boxTop + (boxH - dh) / 2);
-        ctx.drawImage(useImg, dx, dy, dw, dh);
+        // Slight overscan to guarantee no slivers at the edges when scaled/rounded
+        const OVERSCAN_IMG = 12; // pixels
+        ctx.drawImage(useImg, dx - OVERSCAN_IMG, dy - OVERSCAN_IMG, dw + OVERSCAN_IMG*2, dh + OVERSCAN_IMG*2);
 
         ctx.restore();
       }
@@ -2278,7 +2368,7 @@
       })();
 
       // (Removed gold tiebacks to avoid visual confusion)
-      // Instruction bubble if player is close — position just above the avatar's head
+      // Instruction bubble if player is close â€” position just above the avatar's head
       const d = Math.abs(player.x - (stage.leftOffset + sec.x + sec.w/2)); // Distance from player to center
       // Only show the hint when you're firmly inside the open zone
       if (d < Math.max(10, (OPEN_DISTANCE - 10))) { // a little tighter than open distance
@@ -2315,7 +2405,7 @@
         const isSmallScreen = (vw < 900) || (vh < 600);
         const targetHBase = Math.max(80, Math.min(160, Math.floor(vh * 0.26)));
         const targetH = isSmallScreen ? Math.floor(targetHBase * 1.05) : targetHBase;
-        const targetHScaled = Math.floor(targetH * (AVATAR.sizeMul || 1));
+        const targetHScaled = Math.floor(targetH * (AVATAR.sizeMul || 1) * PNG_SCALE);
         const scale = targetHScaled / AVATAR.fh;
         const dw = Math.floor(AVATAR.fw * scale);
         const dh = Math.floor(AVATAR.fh * scale);
@@ -2375,9 +2465,9 @@
       }
 
       // Determine limb angles for a normal gait
-      const thighAmp = 0.55;  // radians swing ~31°
+      const thighAmp = 0.55;  // radians swing ~31Â°
       const shinBase = 0.25;  // base knee bend
-      const armAmp = 0.45;    // arm swing ~26°
+      const armAmp = 0.45;    // arm swing ~26Â°
 
       // Back vs front decision so we render depth correctly
       // When gait>0, left leg forward, right back (arbitrary); draw back limb first
@@ -2397,7 +2487,7 @@
         // Compute length so ankle hits the carpet regardless of angle
         const startX = hips.x + side*6, startY = hips.y - 2;
         const dy = (baseY - startY);
-        const cosA = Math.max(0.6, Math.cos(legAng)); // avoid extreme lengths near 90°
+        const cosA = Math.max(0.6, Math.cos(legAng)); // avoid extreme lengths near 90Â°
         const legLen = Math.max(thigh + shin - 2, dy / cosA);
         segment(startX, startY, legLen, legT, legAng, color);
         // no feet: legs meet the carpet directly
@@ -2547,7 +2637,8 @@
 
     function update(dt) { // Update simulation for one frame
       player.walking = false; // Reset walking flag
-      const runMul = keys.run ? 3.6 : 1; // Shift to run (doubled sprint speed)
+      const isRunning = (keys.runToggle || keys.shiftRun); // effective sprint: toggle OR Shift
+      const runMul = isRunning ? 3.6 : 1; // sprint speed multiplier
 
       // When holding mouse, continuously steer based on mouse X vs avatar center
       if (mouseWalk.active && mouseWalk.targetX != null) {
@@ -2568,14 +2659,14 @@
       if (keys.left)  { player.x -= world.speed * runMul * 60 * dt; player.facing = -1; player.walking = true; } // Move left
       if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
       player.x = Math.max(world.minX, Math.min(world.maxX, player.x)); // Clamp player within world bounds
-      if (player.walking) player.t += dt * (keys.run ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running (doubled)
+      if (player.walking) player.t += dt * (isRunning ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running
 
       // Update avatar sprite animation (idle/walk + facing)
       if (!player.anim) player.anim = { key: 'idleRight', frame: 0, accum: 0 };
       const prevKey = player.anim.key;
       let nextKey;
       if (player.walking) {
-        if (keys.run && AVATAR && AVATAR.seq && (AVATAR.seq.sprintRight && AVATAR.seq.sprintLeft)) {
+        if (isRunning && AVATAR && AVATAR.seq && (AVATAR.seq.sprintRight && AVATAR.seq.sprintLeft)) {
           nextKey = (player.facing === 1) ? 'sprintRight' : 'sprintLeft';
         } else {
           nextKey = (player.facing === 1) ? 'walkRight' : 'walkLeft';
@@ -2709,7 +2800,7 @@
   })(); // End IIFE
   </script>
   <!-- Background music: loops and autoplays; volume controlled via settings -->
-  <audio id="bgAudio" src="fashion_show_song_0.wav" preload="auto" loop muted playsinline></audio>
+  <audio id="bgAudio" src="assets/sounds/fashion_show_song_0.ogg" preload="auto" loop muted playsinline></audio>
   <script>
     (function () {
       const audio = document.getElementById('bgAudio');
@@ -2782,14 +2873,15 @@
         setVolumePct(getPct());
         audio.muted = false;
         audio.play().catch(() => {});
-        window.removeEventListener('pointerdown', unlock);
-        window.removeEventListener('keydown', unlock);
       };
       // Start muted; route through Web Audio once unlocked
       audio.volume = 0;
       audio.play().catch(() => {});
-      window.addEventListener('pointerdown', unlock);
-      window.addEventListener('keydown', unlock);
+      // Use capture-phase + once so we catch the first gesture even if inner UI stops propagation
+      const unlockEvents = ['pointerdown','pointerup','click','touchstart','touchend','keydown','keyup'];
+      for (const ev of unlockEvents) {
+        window.addEventListener(ev, unlock, { capture: true, once: true });
+      }
       // Wire slider if present and expose controls for settings
       wireSlider();
       window.bgAudioControls = {
@@ -2803,6 +2895,8 @@
   </script>
 </body>
 </html>
+
+
 
 
 
