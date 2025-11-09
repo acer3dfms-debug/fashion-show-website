@@ -36,7 +36,7 @@
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
     #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(calc(-100% - 12px), -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
-    #modal { width: min(720px, 92vw); max-height: 80vh; overflow: auto; background: transparent; border: 0; border-radius: 0; box-shadow: none; } /* Modal scroll container; visual chrome moved to .popupInner */
+    #modal { width: min(720px, 92vw); max-height: 80vh; overflow-y: auto; overflow-x: hidden; background: transparent; border: 0; border-radius: 0; box-shadow: none; } /* Modal scroll container; visual chrome moved to .popupInner */
     #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; } /* Sticky modal header */
     #modal .content { padding: 16px; } /* Modal content area */
     #closeModal { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px 10px; cursor: pointer; } /* Close button */
@@ -74,17 +74,31 @@
     /* Always-visible Help button under Settings */
     #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-weight: 700; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #helpBtn:hover { background: rgba(255,255,255,0.16); }
-    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow: auto; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); }
+    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: none; overflow: visible; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); }
     #settingsPanel header { position: sticky; top: 0; z-index: 1; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: rgba(20,20,28,0.95); }
-    /* Scale the visual content (including text) of popup UIs uniformly */
+    /* Popup chrome base */
     .popupInner {
-      transform: scale(var(--popup-scale));
-      transform-origin: top center;
       background: #121219;
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       margin: 0 auto; /* keep centered within container */
+    }
+    /* Uniform scale for Settings (anchor top-left near screen edge) */
+    #settingsPanel .popupInner {
+      transform: scale(var(--popup-scale));
+      transform-origin: top left;
+      width: calc(100% / var(--popup-scale));
+      will-change: transform;
+      contain: layout paint;
+    }
+    /* Uniform scale for Modal (centered) */
+    #modal .popupInner {
+      transform: scale(var(--popup-scale));
+      transform-origin: top center;
+      width: calc(100% / var(--popup-scale));
+      will-change: transform;
+      contain: layout paint;
     }
     #settingsPanel header strong { font-size: 13px; }
     #settingsClose, #settingsReset { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
@@ -128,7 +142,7 @@
   <!-- Settings launcher and panel -->
   <button id="settingsBtn" aria-haspopup="dialog" aria-controls="settingsPanel">Settings</button>
   <button id="helpBtn" title="Help" aria-label="Help">?</button>
-  <button id="controlsToggleBtn" title="Toggle on-screen buttons" aria-pressed="true">On-screen Buttons: On</button>
+  <button id="controlsToggleBtn" title="Toggle on-screen controls" aria-pressed="true">On-screen Controls: On</button>
   <div id="settingsPanel" role="dialog" aria-modal="false" aria-label="Settings">
     <div class="popupInner">
       <header>
@@ -146,24 +160,24 @@
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
   <div id="scrollWrap">
-    <div class="title">Scroll Up &amp; Scroll Down <span id="zoomLabel"></span></div>
-    <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Scroll Up" />
+    <div class="title">Camera Lift <span id="zoomLabel"></span></div>
+    <input id="zoomSlider" type="range" min="0" max="100" step="1" aria-label="Camera Lift" />
   </div>
   <div id="controlsSizeWrap" style="display:none;">
-    <div class="title">On-screen Button Size <span id="controlsSizeLabel"></span></div>
-    <input id="controlsSizeSlider" type="range" min="50" max="150" step="5" aria-label="On-screen Button Size" />
+    <div class="title">On-screen Controls Size <span id="controlsSizeLabel"></span></div>
+    <input id="controlsSizeSlider" type="range" min="50" max="150" step="5" aria-label="On-screen Controls Size" />
   </div>
   <div id="popupSizeWrap" style="display:none;">
-    <div class="title">Popup Size <span id="popupSizeLabel"></span></div>
-    <input id="popupSizeSlider" type="range" min="50" max="150" step="5" aria-label="Popup Size" />
+    <div class="title">Popup Zoom <span id="popupSizeLabel"></span></div>
+    <input id="popupSizeSlider" type="range" min="50" max="150" step="5" aria-label="Popup Zoom" />
   </div>
   <div id="musicWrap" style="display:none;">
     <div class="title">Music Volume <span id="musicLabel"></span></div>
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
   <div id="pngSizeWrap" style="display:none;">
-    <div class="title">PNG Size <span id="pngSizeLabel"></span></div>
-    <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="PNG Size" />
+    <div class="title">Stage Image Size <span id="pngSizeLabel"></span></div>
+    <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="Stage Image Size" />
   </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
@@ -461,10 +475,13 @@
       }
       ctx.restore();
 
-      // Back row drawn ON TOP: lower, larger, and horizontally offset; opposite orientation start
+      // Back row drawn ON TOP: lower, larger, and horizontally offset; orientation alternates with PNG zoom
       {
         let tileIndexB = 0;
-        let useLeftB = false; // start opposite to the front row
+        // Alternate starting flip based on current PNG_SCALE bucket to look good at different zooms
+        const zoomBucket = Math.max(5, Math.min(15, Math.round((PNG_SCALE || 1) * 10))); // 0.5..1.5 -> 5..15
+        const startLeftB = (zoomBucket % 2) === 1; // odd buckets start with left; even with right
+        let useLeftB = startLeftB;
         const yTopBack = yTop + 60;         // lower on screen (further down)
         const scaleMulBack = 1.25;          // larger size
         const startBack = start + Math.floor(baseTile / 2); // half-tile offset
@@ -476,7 +493,7 @@
           const scale = (isLeft ? scaleL : scaleR) * scaleMulBack * PNG_SCALE;
           const dw = Math.ceil(img.naturalWidth * scale);
           const dh = Math.ceil(img.naturalHeight * scale);
-          const sx = Math.floor(wx - camera.x);
+          const sx = Math.floor(wx - camera.x) + 48; // shift middle row to the right by ~48px (18 + 30)
           ctx.drawImage(img, sx, yTopBack, dw, dh);
 
           // Subtler flash for back row
@@ -1205,7 +1222,7 @@
         controlsDiv.style.display = on ? '' : 'none';
         if (controlsToggleBtn) {
           controlsToggleBtn.setAttribute('aria-pressed', String(on));
-          controlsToggleBtn.textContent = 'On-screen Buttons: ' + (on ? 'On' : 'Off');
+          controlsToggleBtn.textContent = 'On-screen Controls: ' + (on ? 'On' : 'Off');
         }
       } catch(_) {}
     }
@@ -1273,9 +1290,9 @@
       });
     }
     // PNG size slider (affects all stage PNGs)
-    let PNG_SCALE = 1; // 0.5 .. 1.5
+    let PNG_SCALE = 1.5; // 0.5 .. 1.5 (default 150%)
     function getPngScalePct(){
-      try { return Math.max(50, Math.min(150, Number(localStorage.getItem('pngScalePct')) || 100)); } catch(_) { return 100; }
+      try { return Math.max(50, Math.min(150, Number(localStorage.getItem('pngScalePct')) || 150)); } catch(_) { return 150; }
     }
     function applyPngScale(pct){
       PNG_SCALE = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
@@ -1306,10 +1323,17 @@
       popupSizeSlider.value = String(init);
       if (popupSizeLabel) popupSizeLabel.textContent = init + '%';
       applyPopupScale(init);
+      let _popupRAF = 0, _pendingPopup = init;
       popupSizeSlider.addEventListener('input', () => {
         const v = Math.max(50, Math.min(150, Number(popupSizeSlider.value)||100));
+        _pendingPopup = v;
         if (popupSizeLabel) popupSizeLabel.textContent = v + '%';
-        applyPopupScale(v);
+        if (!_popupRAF) {
+          _popupRAF = requestAnimationFrame(() => { applyPopupScale(_pendingPopup); _popupRAF = 0; });
+        }
+      });
+      popupSizeSlider.addEventListener('change', () => {
+        const v = Math.max(50, Math.min(150, Number(popupSizeSlider.value)||100));
         try { localStorage.setItem('popupScalePct', String(v)); } catch(_) {}
       });
     }
@@ -1317,13 +1341,14 @@
     function openSettings() {
       settingsOpen = true;
       settingsPanel.style.display = 'block';
-      try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
+      // Order: Interface, Display, Media, Effects
       try { settingsContent.appendChild(controlsToggleBtn); controlsToggleBtn.style.display = ''; } catch(_){ }
-      try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(controlsSizeWrap); controlsSizeWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(popupSizeWrap); popupSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(pngSizeWrap); pngSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
     }
     function closeSettings() {
@@ -1356,10 +1381,10 @@
         }
         // PNG scale
         if (pngSizeSlider) {
-          pngSizeSlider.value = '100';
-          if (pngSizeLabel) pngSizeLabel.textContent = '100%';
-          applyPngScale(100);
-          try { localStorage.setItem('pngScalePct','100'); } catch(_) {}
+          pngSizeSlider.value = '150';
+          if (pngSizeLabel) pngSizeLabel.textContent = '150%';
+          applyPngScale(150);
+          try { localStorage.setItem('pngScalePct','150'); } catch(_) {}
         }
         // Popup size
         if (popupSizeSlider) {
@@ -1418,15 +1443,17 @@
     }
     function sectionHeaderAt(sceneX, sceneY) {
       const y = world.runwayY();
-      const headerTop = y - 220;
-      const headerBottom = y - 140;
+      // Match drawMarquee geometry so clickable area tracks PNG scaling
+      const DOOR_SCALE = Math.max(0.5, Math.min(1.5, (typeof PNG_SCALE === 'number' ? PNG_SCALE : 1)));
       for (const sec of sections) {
         const screenX = (stage.leftOffset + sec.x) - camera.x;
-        const x1 = screenX + 18;
-        const x2 = x1 + (sec.w - 36);
-        const y1 = headerTop;
-        const y2 = headerBottom;
-        if (sceneX >= x1 && sceneX <= x2 && sceneY >= y1 && sceneY <= y2) return sec;
+        const drawW = Math.round(sec.w * DOOR_SCALE);
+        const drawX = Math.round(screenX - (drawW - sec.w) / 2);
+        const headerTop = y - Math.round(220 * DOOR_SCALE);
+        const headerBottom = y - Math.round(140 * DOOR_SCALE);
+        const x1 = drawX + 18;
+        const x2 = x1 + (drawW - 36);
+        if (sceneX >= x1 && sceneX <= x2 && sceneY >= headerTop && sceneY <= headerBottom) return sec;
       }
       return null;
     }
@@ -2508,13 +2535,30 @@
   })(); // End IIFE
   </script>
   <!-- Background music: loops and autoplays; volume controlled via settings -->
-  <audio id="bgAudio" src="assets/sounds/fashion_show_song_0.ogg" preload="auto" loop muted playsinline></audio>
+  <audio id="bgAudio" preload="auto" loop muted playsinline></audio>
   <script>
     (function () {
       const audio = document.getElementById('bgAudio');
       if (!audio) return;
       let ctx = null, source = null, gain = null;
       const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+      // Pick best-supported source for this browser (favor AAC/MP3 for iOS)
+      function chooseAudioSource() {
+        try {
+          const candidates = [
+            { src: 'assets/sounds/fashion_show_song_0.m4a', type: 'audio/mp4' },
+            { src: 'assets/sounds/fashion_show_song_0.mp3', type: 'audio/mpeg' },
+            { src: 'assets/sounds/fashion_show_song_0.ogg', type: 'audio/ogg' },
+          ];
+          for (const c of candidates) {
+            const ok = audio.canPlayType ? audio.canPlayType(c.type) : '';
+            if (ok === 'probably' || ok === 'maybe') { audio.src = c.src; return; }
+          }
+          // fallback to ogg if detection unavailable
+          if (!audio.src) audio.src = 'assets/sounds/fashion_show_song_0.ogg';
+        } catch(_) {}
+      }
+      chooseAudioSource();
       const getPct = () => {
         const v = Number(localStorage.getItem('musicVolPct'));
         return Number.isFinite(v) ? clamp(v, 0, 150) : 50; // default 50%
@@ -2579,9 +2623,14 @@
         if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch(_) {} }
         // Apply stored volume and unmute
         setVolumePct(getPct());
-        audio.muted = false;
+        // Only unmute if volume > 0
+        audio.muted = getPct() <= 0 ? true : false;
         audio.play().catch(() => {});
       };
+      // Unlock audio on first user gesture anywhere
+      const once = () => { unlock(); window.removeEventListener('pointerdown', once, true); window.removeEventListener('touchstart', once, true); };
+      window.addEventListener('pointerdown', once, true);
+      window.addEventListener('touchstart', once, true);
       // Start muted; route through Web Audio once unlocked
       audio.volume = 0;
       audio.play().catch(() => {});
