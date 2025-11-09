@@ -74,7 +74,7 @@
     /* Always-visible Help button under Settings */
     #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-weight: 700; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #helpBtn:hover { background: rgba(255,255,255,0.16); }
-    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: none; overflow: visible; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); }
+    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow-y: auto; overflow-x: hidden; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; }
     #settingsPanel header { position: sticky; top: 0; z-index: 1; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: rgba(20,20,28,0.95); }
     /* Popup chrome base */
     .popupInner {
@@ -83,12 +83,15 @@
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       margin: 0 auto; /* keep centered within container */
+      box-sizing: border-box;
+      padding: 8px 10px;
     }
     /* Uniform scale for Settings (anchor top-left near screen edge) */
     #settingsPanel .popupInner {
       transform: scale(var(--popup-scale));
       transform-origin: top left;
-      width: calc(100% / var(--popup-scale));
+      /* subtract 2px to account for scaled 1px border so right edge doesn't clip */
+      width: calc((100% - 2px) / var(--popup-scale));
       will-change: transform;
       contain: layout paint;
     }
@@ -96,7 +99,7 @@
     #modal .popupInner {
       transform: scale(var(--popup-scale));
       transform-origin: top center;
-      width: calc(100% / var(--popup-scale));
+      width: calc((100% - 2px) / var(--popup-scale));
       will-change: transform;
       contain: layout paint;
     }
@@ -279,6 +282,7 @@
       buildMarblePattern(); // Rebuild background texture for new size/theme
     }
     window.addEventListener('resize', resize); // Re-run on window resize
+    window.addEventListener('resize', () => { try { updateSettingsScrollPad(); } catch(_){} });
     window.addEventListener('orientationchange', () => setTimeout(resize, 100));
     resize(); // Initialize canvas size immediately
 
@@ -1312,13 +1316,44 @@
         try { localStorage.setItem('pngScalePct', String(v)); } catch(_) {}
       });
     }
+    // Provide scroll padding for scaled Settings content so the panel scrolls to full height
+    function updateSettingsScrollPad(){
+      try {
+        const panel = document.getElementById('settingsPanel');
+        if (!panel || panel.style.display === 'none') return;
+        const inner = panel.querySelector('.popupInner');
+        if (!inner) return;
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        let spacer = panel.querySelector('#settingsScrollSpacer');
+        if (s <= 1) {
+          if (spacer) spacer.style.height = '0px';
+          return;
+        }
+        const unscaled = inner.scrollHeight || inner.offsetHeight || 0;
+        const extra = Math.max(0, Math.ceil(unscaled * (s - 1)));
+        if (!spacer) {
+          spacer = document.createElement('div');
+          spacer.id = 'settingsScrollSpacer';
+          spacer.style.width = '1px';
+          spacer.style.height = extra + 'px';
+          spacer.style.pointerEvents = 'none';
+          spacer.style.opacity = '0';
+          panel.appendChild(spacer);
+        } else {
+          spacer.style.height = extra + 'px';
+        }
+      } catch(_) {}
+    }
     // Popup size slider (affects modal and settings widths)
     function getPopupScalePct(){
       try { return Math.max(50, Math.min(150, Number(localStorage.getItem('popupScalePct')) || 100)); } catch(_) { return 100; }
     }
     function applyPopupScale(pct){
       const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
-      try { document.documentElement.style.setProperty('--popup-scale', String(s)); } catch(_) {}
+      try {
+        document.documentElement.style.setProperty('--popup-scale', String(s));
+        updateSettingsScrollPad();
+      } catch(_) {}
     }
     if (popupSizeSlider) {
       const init = getPopupScalePct();
@@ -1353,6 +1388,7 @@
       try { settingsContent.appendChild(musicPlayBtn); musicPlayBtn.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
+      try { updateSettingsScrollPad(); } catch(_){}
     }
     function closeSettings() {
       settingsOpen = false;
