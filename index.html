@@ -30,9 +30,10 @@
     /* Keep CTA button styling used inside modals */
     .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); }
     .navBtn:hover { background: rgba(255,255,255,0.18); }
-    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 5; font-size: 12px; opacity: 0.85; line-height: 1.4; background: rgba(0,0,0,0.35); padding: 8px 28px 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); max-width: min(92vw, 420px); overflow-wrap: anywhere; } /* On-screen help */
-    #legend .legendClose { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
-    #legend .legendClose:hover { background: rgba(255,255,255,0.2); }
+    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 8; font-size: 12px; line-height: 1.4; padding: 8px 28px 8px 10px; border-radius: 12px; max-width: min(92vw, 420px); overflow-wrap: anywhere; background: #1e2128; color: var(--accent); font-weight: 700; border: 1px solid rgba(241,207,99,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); transform-origin: bottom left; transform: scale(2); } /* On-screen help (tutorial) */
+    #legend b { color: var(--accent); }
+    #legend .legendClose { position: absolute; top: 6px; right: 8px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
+    #legend .legendClose:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
     #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(calc(-100% - 12px), -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
@@ -43,7 +44,20 @@
 
     /* Mobile controls (optional) */
     #controls { position: fixed; right: 12px; bottom: 12px; display: grid; gap: 8px; z-index: 6; } /* Docked control cluster */
-    #controls button { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 12px; font-size: 14px; padding: 10px 12px; min-width: 44px; backdrop-filter: blur(6px); } /* Tappable buttons */
+    #controls button {
+      appearance: none;
+      border: 1px solid rgba(241,207,99,0.6); /* gold edge */
+      background: #1e2128; /* dark grey */
+      color: var(--accent); /* gold text */
+      font-weight: 700; /* bolder */
+      border-radius: 12px;
+      font-size: 14px;
+      padding: 10px 12px; min-width: 44px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25);
+    } /* Tappable buttons */
+    #controls button:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
+    #controls button:active { background: #191c23; transform: translateY(1px); }
 
     /* Paparazzi toggle button (world-anchored near spawn) */
     #paparazziBtn { position: fixed; z-index: 7; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--ui); border-radius: 999px; font-size: 12px; padding: 6px 10px; backdrop-filter: blur(6px); cursor: pointer; }
@@ -69,11 +83,13 @@
       -khtml-user-select: none;
     }
     /* Settings button and panel */
-    #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-size: 14px; padding: 8px 12px; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
-    #settingsBtn:hover { background: rgba(255,255,255,0.16); }
+    #settingsBtn { position: fixed; left: 10px; top: 10px; z-index: 9; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-weight: 700; border-radius: 12px; font-size: 14px; padding: 8px 12px; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); }
+    #settingsBtn:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
+    #settingsBtn:active { background: #191c23; transform: translateY(1px); }
     /* Always-visible Help button under Settings */
-    #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-weight: 700; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
-    #helpBtn:hover { background: rgba(255,255,255,0.16); }
+    #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-weight: 700; border-radius: 12px; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); }
+    #helpBtn:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
+    #helpBtn:active { background: #191c23; transform: translateY(1px); }
     #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow-y: auto; overflow-x: hidden; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; }
     #settingsPanel header { position: sticky; top: 0; z-index: 10; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: #121219; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
     /* Popup chrome base */
@@ -222,9 +238,9 @@
   <canvas id="stage"></canvas> <!-- Fullscreen canvas used to draw the runway and avatar -->
 
   <div id="controls" aria-hidden="false"> <!-- On-screen control buttons for touch/mobile -->
-    <button id="btnLeft"  title="Walk left" aria-label="Walk left">&larr;</button> <!-- Walk left -->
-    <button id="btnRight" title="Walk right" aria-label="Walk right">&rarr;</button> <!-- Walk right -->
-    <button id="btnUp"    title="Open (Up/Enter)" aria-label="Open (Up/Enter)">&uarr; / Enter</button> <!-- Open section -->
+    <button id="btnLeft"  title="Walk left" aria-label="Walk left">&#x2B05;</button> <!-- ⬅ Black Leftwards Arrow -->
+    <button id="btnRight" title="Walk right" aria-label="Walk right">&#x27A1;</button> <!-- ➡ Black Rightwards Arrow -->
+    <button id="btnUp"    title="Open (Up/Enter)" aria-label="Open (Up/Enter)">&#x2B06; / Enter</button> <!-- ⬆ Black Upwards Arrow -->
     <button id="btnSprint" title="Toggle sprint" aria-label="Toggle sprint">Sprint: Off</button> <!-- Sprint toggle -->
   </div>
 
@@ -1434,10 +1450,10 @@
       // Repurpose slider: move camera DOWN to reveal more of the TOP (no zoom)
       // Map 0..100 -> 0..250 px of downward scene shift
       const valueToLift = (v) => Math.max(0, Math.min(250, Math.round(250 * (v/100))));
-      // Start with no lift (0)
-      zoomSlider.value = '0';
-      view.yLift = 0;
-      if (zoomLabel) zoomLabel.textContent = '0%';
+      // Start with default 70% lift
+      zoomSlider.value = '70';
+      view.yLift = valueToLift(70);
+      if (zoomLabel) zoomLabel.textContent = '70%';
       view.autoScale = false; // ensure auto zoom doesn’t fight manual lift
       zoomSlider.setAttribute('aria-label', 'Scroll Up');
       zoomSlider.addEventListener('input', () => {
@@ -1458,7 +1474,11 @@
         controlsDiv.style.transformOrigin = 'bottom right';
         controlsDiv.style.transform = 'scale(' + s + ')';
       }
-      // Also scale the Settings (and Help) buttons so the slider affects them too
+      // Also scale the Settings and Help buttons
+      // Keep their vertical spacing proportional to scale so they never overlap
+      const BASE_TOP = 10;            // CSS top for Settings
+      const BTN_H = 36;               // Base button height in CSS
+      const GAP = 6;                  // Visual gap between Settings and Help in CSS
       if (typeof settingsBtn !== 'undefined' && settingsBtn) {
         settingsBtn.style.transformOrigin = 'top left';
         settingsBtn.style.transform = 'scale(' + s + ')';
@@ -1466,6 +1486,16 @@
       if (typeof helpBtn !== 'undefined' && helpBtn) {
         helpBtn.style.transformOrigin = 'top left';
         helpBtn.style.transform = 'scale(' + s + ')';
+        // Position Help below the scaled Settings height + gap
+        const helpTop = BASE_TOP + Math.round((BTN_H + GAP) * s);
+        helpBtn.style.top = helpTop + 'px';
+        helpBtn.style.left = '10px';
+      }
+      // Nudge Settings panel to sit just under the scaled Settings button
+      if (typeof settingsPanel !== 'undefined' && settingsPanel) {
+        const panelTop = BASE_TOP + Math.round(BTN_H * s);
+        settingsPanel.style.top = panelTop + 'px';
+        settingsPanel.style.left = '10px';
       }
     }
     if (controlsSizeSlider) {
@@ -1596,10 +1626,10 @@
           paparazziBtn.setAttribute('aria-pressed','true');
           paparazziBtn.textContent = 'Paparazzi: On';
         }
-        // Scroll Up (y-lift)
-        if (zoomSlider) { zoomSlider.value = '0'; }
-        if (zoomLabel) { zoomLabel.textContent = '0%'; }
-        view.yLift = 0;
+        // Scroll Up (y-lift) default to 70%
+        if (zoomSlider) { zoomSlider.value = '70'; }
+        if (zoomLabel) { zoomLabel.textContent = '70%'; }
+        view.yLift = Math.round(250 * 0.70);
         // On-screen controls size
         if (controlsSizeSlider) {
           controlsSizeSlider.value = '100';
@@ -2953,6 +2983,7 @@
   </script>
 </body>
 </html>
+
 
 
 
