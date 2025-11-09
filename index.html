@@ -20,7 +20,8 @@
       --ui: #ffffff;            /* General UI text color */
       --spot: rgba(255,255,255,0.06); /* Soft spotlight color */
       --modal-bg: rgba(0,0,0,0.6);    /* Dim background behind modal */
-      --popup-scale: 1;         /* Global scale for popup boxes (modal, settings); range 0.5–1.5 */
+      --popup-scale: 1;         /* Global scale for popup boxes (modal, settings); range 0.5-1.5 */
+      --settings-safe: 0px;     /* No extra right safe area; let content use full width */
     }
     html, body {
       margin: 0; height: 100%; background: var(--bg); color: var(--ui); /* Full-height dark background */
@@ -90,7 +91,7 @@
     #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-weight: 700; border-radius: 12px; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); }
     #helpBtn:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
     #helpBtn:active { background: #191c23; transform: translateY(1px); }
-    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow-y: auto; overflow-x: hidden; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; }
+    #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(92vw, 360px); max-height: calc(100vh - 60px); overflow-y: auto; overflow-x: hidden; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; }
     #settingsPanel header { position: sticky; top: 0; z-index: 10; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: #121219; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
     /* Popup chrome base */
     .popupInner {
@@ -100,17 +101,12 @@
       box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       margin: 0 auto; /* keep centered within container */
       box-sizing: border-box;
-      padding: 8px 10px;
+      padding: 8px 16px; /* symmetric horizontal padding for balanced left/right space */
       position: relative; /* create stacking context for sticky header z-index */
     }
-    /* Uniform scale for Settings (anchor top-left near screen edge) */
-    #settingsPanel .popupInner {
-      transform: scale(var(--popup-scale));
-      transform-origin: top left;
-      /* subtract 2px to account for scaled 1px border so right edge doesn't clip */
-      width: calc((100% - 2px) / var(--popup-scale));
-      will-change: transform;
-      contain: layout paint;
+    /* Settings: keep chrome (header) unscaled so sticky stays put */
+    #settingsPanel .popupInner { /* no transform here */
+      width: calc(100% - var(--settings-safe));
     }
     /* Uniform scale for Modal (centered) */
     /* Keep modal chrome stable; scale only the body to avoid header jitter */
@@ -124,16 +120,52 @@
       will-change: transform;
       contain: layout paint;
     }
+    /* Apply the same body scaling rules inside Settings */
+    #settingsPanel .popupBody {
+  transform: none !important;
+  transform-origin: top left;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}/* Keep Reset/Close in one row */
+    #settingsPanel header > div { display:flex; gap:6px; align-items:center; flex-wrap: nowrap; }
     #settingsPanel header strong { font-size: 13px; }
     #settingsClose, #settingsReset, #musicMuteBtn { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; }
+    /* Match SFX mute button styling to other settings buttons */
+    #sfxMuteBtn { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; }
     #settingsReset { margin-right: 6px; }
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
     #settingsPanel #paparazziBtn { position: static; width: 100%; }
     #settingsPanel #controlsToggleBtn { position: static; width: 100%; }
-    #settingsPanel #scrollWrap, #settingsPanel #musicWrap, #settingsPanel #controlsSizeWrap, #settingsPanel #popupSizeWrap, #settingsPanel #pngSizeWrap { position: static; width: auto; max-width: 100%; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; display: block; gap: 0; }
+    #settingsPanel #scrollWrap, #settingsPanel #musicWrap, #settingsPanel #controlsSizeWrap, #settingsPanel #popupSizeWrap, #settingsPanel #pngSizeWrap { position: static; width: auto; max-width: 100%; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; display: block; gap: 0; }
+    /* SFX row styling inside Settings (mirrors other rows) */
+    #settingsPanel #sfxWrap { position: static; width: auto; max-width: 100%; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); backdrop-filter: none; box-shadow: none; overflow: hidden; display: block; gap: 0; }
+    #settingsPanel #sfxWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
+    /* Normalize: keep consistent backdrop for all rows */
+    #settingsPanel #popupSizeWrap,
+    #settingsPanel #pngSizeWrap {
+      background: rgba(255,255,255,0.08) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      overflow: hidden !important;
+      border-radius: 999px !important;
+    }
+    /* Add generous default right padding so content doesn't tuck under scrollbar */
+    #settingsPanel #scrollWrap,
+    #settingsPanel #musicWrap,
+    #settingsPanel #controlsSizeWrap,
+    #settingsPanel #popupSizeWrap,
+    #settingsPanel #pngSizeWrap { padding-right: 16px; }
     #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title, #settingsPanel #controlsSizeWrap .title, #settingsPanel #popupSizeWrap .title, #settingsPanel #pngSizeWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
-    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider, #settingsPanel #popupSizeSlider, #settingsPanel #pngSizeSlider { width: calc(100% - 4px); margin: 0 2px; display: block; box-sizing: border-box; }
+    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider, #settingsPanel #popupSizeSlider, #settingsPanel #pngSizeSlider { width: calc(100% - 24px); margin: 0 12px; display: block; box-sizing: border-box; }
+    /* Segmented buttons for Popup Zoom */
+    /* Use full-width grid so backdrop fully covers chips */
+    #settingsPanel #popupSizeChoices { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: auto; grid-column-gap: 6px; grid-row-gap: 6px; align-items: center; margin: 4px 2px 2px; width: 100%; justify-items: stretch; }
+    #settingsPanel .segBtn { appearance: none; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.12); color: var(--ui); border-radius: 999px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+    #settingsPanel .segBtn:hover { background: rgba(255,255,255,0.18); }
+    #settingsPanel .segBtn[aria-pressed="true"], #settingsPanel .segBtn.active { background: var(--accent); color: #000; border-color: rgba(241,207,99,0.8); }
+    /* Normalize chip sizing and placement */
+    #settingsPanel #popupSizeChoices .segBtn { justify-self: stretch; width: 100%; text-align: center; }
     /* Make both sliders share the same clean bar + thumb styling inside Settings */
     #settingsPanel input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
     #settingsPanel input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22); }
@@ -176,9 +208,11 @@
           <button id="settingsClose" aria-label="Close Settings">Close</button>
         </div>
       </header>
-      <div id="settingsContent"></div>
+      <div class="popupBody">
+        <div id="settingsContent"></div>
+      </div>
+      </div>
     </div>
-  </div>
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
@@ -201,13 +235,24 @@
   </div>
   <div id="popupSizeWrap" style="display:none;">
     <div class="title">Popup Zoom <span id="popupSizeLabel"></span></div>
-    <input id="popupSizeSlider" type="range" min="50" max="150" step="5" aria-label="Popup Zoom" />
+    <div id="popupSizeChoices" role="group" aria-label="Popup Zoom">
+      <button type="button" class="segBtn" data-scale="50" aria-pressed="false">50%</button>
+      <button type="button" class="segBtn" data-scale="75" aria-pressed="false">75%</button>
+      <button type="button" class="segBtn" data-scale="100" aria-pressed="true">100%</button>
+      <button type="button" class="segBtn" data-scale="125" aria-pressed="false">125%</button>
+      <button type="button" class="segBtn" data-scale="150" aria-pressed="false">150%</button>
+    </div>
   </div>
   <div id="musicWrap" style="display:none;">
     <div class="title">Music Volume <span id="musicLabel"></span></div>
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
   <button id="musicMuteBtn" style="display:none;" title="Mute music" aria-label="Mute music">Mute Music</button>
+  <!-- Sound Effects controls (mute only for now) -->
+  <div id="sfxWrap" style="display:none;">
+    <div class="title">Sound Effects</div>
+  </div>
+  <button id="sfxMuteBtn" style="display:none;" title="Mute sound effects" aria-label="Mute sound effects">Mute SFX</button>
   <div id="pngSizeWrap" style="display:none;">
     <div class="title">Stage Image Size <span id="pngSizeLabel"></span></div>
     <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="Stage Image Size" />
@@ -215,9 +260,9 @@
   <div id="imgQualityWrap" style="display:none;">
     <div class="title">Image Quality</div>
     <select id="imgQualitySelect" aria-label="Image Quality">
-      <option value="auto">Auto (WebP if supported)</option>
-      <option value="webp">Faster (WebP)</option>
-      <option value="png">Sharper (PNG)</option>
+        <option value="auto">Auto (WebP-first, PNG fallback)</option>
+        <option value="webp">Faster (WebP)</option>
+        <option value="png">Sharper (PNG)</option>
     </select>
   </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
@@ -256,18 +301,14 @@
       document.body.appendChild(el);
     }, { once: true });
     // IMAGE FORMAT SELECTION (WebP vs PNG)
-    function detectWebPSupport() {
-      try { const c = document.createElement('canvas'); return c.toDataURL && c.toDataURL('image/webp').indexOf('data:image/webp') === 0; } catch(_) { return false; }
-    }
-    const WEBP_SUPPORTED = detectWebPSupport();
     function getImgQualityPref() { try { return (localStorage.getItem('imgQualityPref') || 'auto'); } catch(_) { return 'auto'; } }
     function setImgQualityPref(v) { try { localStorage.setItem('imgQualityPref', String(v)); } catch(_) {} }
     function resolveImgCandidates(pngPath) {
       const pref = getImgQualityPref();
-      const wantWebp = (pref === 'webp') || (pref === 'auto' && WEBP_SUPPORTED);
       const webpPath = pngPath.replace(/\.png($|\?)/i, '.webp$1');
       const pngPathFixed = pngPath.replace(/\.webp($|\?)/i, '.png$1');
-      return wantWebp ? [webpPath, pngPathFixed] : [pngPathFixed, webpPath];
+      if (pref === 'png') return [pngPathFixed, webpPath];
+      return [webpPath, pngPathFixed];
     }
     function smartLoadImage(img, pngPath, onReadyTrue, onFail){
       const list = resolveImgCandidates(pngPath);
@@ -342,7 +383,7 @@
       buildMarblePattern(); // Rebuild background texture for new size/theme
     }
     window.addEventListener('resize', resize); // Re-run on window resize
-    window.addEventListener('resize', () => { try { updateSettingsScrollPad(); updateModalScrollPad(); } catch(_){} });
+    window.addEventListener('resize', () => { try { updateModalScrollPad(); } catch(_){} });
     // Draw avatar over the video area only
     // Removed player overlay (avatar remains behind the video billboard by design)
     // Position the endcap YouTube overlay in screen space to match the canvas billboard
@@ -1350,16 +1391,18 @@
     const controlsSizeWrap = document.getElementById('controlsSizeWrap');
     const controlsSizeSlider = document.getElementById('controlsSizeSlider');
     const popupSizeWrap = document.getElementById('popupSizeWrap');
-    const popupSizeSlider = document.getElementById('popupSizeSlider');
+    const popupSizeChoices = document.getElementById('popupSizeChoices');
     const popupSizeLabel = document.getElementById('popupSizeLabel');
     const settingsBtn = document.getElementById('settingsBtn');
     const helpBtn = document.getElementById('helpBtn');
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsContent = document.getElementById('settingsContent');
     const pngSizeWrap = document.getElementById('pngSizeWrap');
+    const sfxWrap = document.getElementById('sfxWrap');
     const imgQualityWrap = document.getElementById('imgQualityWrap');
     const imgQualitySelect = document.getElementById('imgQualitySelect');
     const musicMuteBtn = document.getElementById('musicMuteBtn');
+    const sfxMuteBtn = document.getElementById('sfxMuteBtn');
     const pngSizeSlider = document.getElementById('pngSizeSlider');
     const pngSizeLabel = document.getElementById('pngSizeLabel');
     // Image Quality selector wiring
@@ -1536,15 +1579,12 @@
       try {
         const panel = document.getElementById('settingsPanel');
         if (!panel || panel.style.display === 'none') return;
-        const inner = panel.querySelector('.popupInner');
-        if (!inner) return;
+        const body = panel.querySelector('.popupBody');
+        if (!body) return;
         const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
         let spacer = panel.querySelector('#settingsScrollSpacer');
-        if (s <= 1) {
-          if (spacer) spacer.style.height = '0px';
-          return;
-        }
-        const unscaled = inner.scrollHeight || inner.offsetHeight || 0;
+        if (s <= 1) { if (spacer) spacer.style.height = '0px'; return; }
+        const unscaled = body.scrollHeight || body.offsetHeight || 0;
         const extra = Math.max(0, Math.ceil(unscaled * (s - 1)));
         if (!spacer) {
           spacer = document.createElement('div');
@@ -1559,40 +1599,104 @@
         }
       } catch(_) {}
     }
+    // Scale right padding of all rounded rows so nothing hides under scrollbar at higher zoom
+    function updateSettingsRowPadding(){
+      try {
+        const wrapIds = ['scrollWrap','musicWrap','controlsSizeWrap','popupSizeWrap','pngSizeWrap'];
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        const sbw = Math.max(0, (settingsPanel && (settingsPanel.offsetWidth - settingsPanel.clientWidth)) || 0);
+        const base = 40; // CSS default above at 100%
+        const pad = Math.round(base * s) + sbw; // grow with scale and reserve for scrollbar
+        for (const id of wrapIds) {
+          const el = document.getElementById(id);
+          if (el) el.style.paddingRight = pad + 'px';
+        }
+      } catch(_) {}
+    }
+    // Ensure Popup Zoom chips never clip: keep 100% at far right and pad for scrollbar width
+    function updatePopupChoicesGutter(){
+      try {
+        const panel = document.getElementById('settingsPanel');
+        const wrap = document.getElementById('popupSizeWrap');
+        const choices = document.getElementById('popupSizeChoices');
+        if (!panel || !wrap || !choices) return;
+        const btn100 = choices.querySelector('[data-scale="100"]');
+        // Clear any inline order/margins so CSS Grid takes effect cleanly
+        if (btn100) { btn100.style.order = ''; btn100.style.marginLeft = ''; }
+        // Pad the right side based on scrollbar width AND current popup scale
+        const sbw = Math.max(0, (panel.offsetWidth - panel.clientWidth) || 0);
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        const base = 24; // base px at 100%
+        const pad = Math.round(base * s) + sbw;
+        wrap.style.paddingRight = pad + 'px';
+      } catch(_) {}
+    }
     // Popup size slider (affects modal and settings widths)
     function getPopupScalePct(){
       try { return Math.max(50, Math.min(150, Number(localStorage.getItem('popupScalePct')) || 100)); } catch(_) { return 100; }
     }
     function applyPopupScale(pct){
-      const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
+  const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
+  try {
+    document.documentElement.style.setProperty('--popup-scale', String(s));
+    const ws = s > 1 ? (1/s) : 1; // keep modal body inside container when zoomed in
+    document.documentElement.style.setProperty('--popup-inner-wscale', String(ws));
+    updateModalScrollPad();
+  } catch(_) {}
+}
+    // Popup Zoom options (segmented buttons)
+    function markPopupChoice(v){
       try {
-        document.documentElement.style.setProperty('--popup-scale', String(s));
-        const ws = s > 1 ? (1/s) : 1; // keep modal body inside container when zoomed in
-        document.documentElement.style.setProperty('--popup-inner-wscale', String(ws));
-        updateSettingsScrollPad();
-        updateModalScrollPad();
+        if (!popupSizeChoices) return;
+        const buttons = popupSizeChoices.querySelectorAll('[data-scale]');
+        buttons.forEach(b => {
+          const on = Number(b.getAttribute('data-scale')) === Number(v);
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
       } catch(_) {}
     }
-    if (popupSizeSlider) {
+    (function initPopupZoom(){
       const init = getPopupScalePct();
-      popupSizeSlider.value = String(init);
-      if (popupSizeLabel) popupSizeLabel.textContent = init + '%';
       applyPopupScale(init);
-      let _popupRAF = 0, _pendingPopup = init;
-      popupSizeSlider.addEventListener('input', () => {
-        const v = Math.max(50, Math.min(150, Number(popupSizeSlider.value)||100));
-        _pendingPopup = v;
-        if (popupSizeLabel) popupSizeLabel.textContent = v + '%';
-        if (!_popupRAF) {
-          _popupRAF = requestAnimationFrame(() => { applyPopupScale(_pendingPopup); _popupRAF = 0; });
-        }
-      });
-      popupSizeSlider.addEventListener('change', () => {
-        const v = Math.max(50, Math.min(150, Number(popupSizeSlider.value)||100));
-        try { localStorage.setItem('popupScalePct', String(v)); } catch(_) {}
-      });
+      if (popupSizeLabel) popupSizeLabel.textContent = init + '%';
+      markPopupChoice(init);
+      if (popupSizeChoices) {
+        popupSizeChoices.addEventListener('click', (e) => {
+          const btn = e.target && e.target.closest && e.target.closest('[data-scale]');
+          if (!btn) return;
+          const v = Math.max(50, Math.min(150, Number(btn.getAttribute('data-scale'))||100));
+          if (popupSizeLabel) popupSizeLabel.textContent = v + '%';
+          markPopupChoice(v);
+          applyPopupScale(v);
+          try { localStorage.setItem('popupScalePct', String(v)); } catch(_) {}
+        });
+      }
+    })();
+    // Dynamically widen the Settings panel at higher zoom so content has room
+    function updateSettingsPanelWidth(){
+      try {
+        if (!settingsPanel) return;
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        const base = 260; // CSS base width
+        const extra = Math.max(0, Math.round((s - 1) * 200)); // +200px over 0.5 scale increase => +100px at 150%
+        const maxW = Math.floor(window.innerWidth * 0.9);
+        const w = Math.min(maxW, base + extra);
+        settingsPanel.style.width = w + 'px';
+      } catch(_) {}
     }
-    // SETTINGS PANEL WIRES
+    // Compute inner right safe gap based on popup scale and scrollbar width
+    function updateSettingsSafe(){
+      try {
+        if (!settingsPanel) return;
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        const sbw = Math.max(0, (settingsPanel.offsetWidth - settingsPanel.clientWidth) || 0);
+        const dyn = Math.max(0, Math.round(((s - 1) / 0.5) * 100)); // 0 at 100%, ~100 at 150%
+        const base = 12; // small breathing room even at 100%
+        const safe = base + sbw + dyn;
+        document.documentElement.style.setProperty('--settings-safe', safe + 'px');
+      } catch(_) {}
+    }// Recompute chip padding/placement on resize as well// SETTINGS PANEL WIRES
     function openSettings() {
       settingsOpen = true;
       settingsPanel.style.display = 'block';
@@ -1605,18 +1709,18 @@
       try { settingsContent.appendChild(imgQualityWrap); imgQualityWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicMuteBtn); musicMuteBtn.style.display = ''; updateMusicMuteUI(); } catch(_){ }
+      try { settingsContent.appendChild(sfxWrap); sfxWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(sfxMuteBtn); sfxMuteBtn.style.display = ''; updateSfxMuteUI(); } catch(_){ }
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
-      try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
-      try { updateSettingsScrollPad(); } catch(_){}
-    }
+      try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}}
     function closeSettings() {
       settingsOpen = false;
       settingsPanel.style.display = 'none';
       // Keep controls inside panel; hidden when closed
     }
-    function resetSettings() {
-      try {
-        // On-screen controls visibility
+      function resetSettings() {
+        try {
+          // On-screen controls visibility
         controlsOn = true;
         try { localStorage.setItem('controlsOn', 'true'); } catch(_) {}
         applyControlsVisible(true);
@@ -1645,9 +1749,9 @@
           try { localStorage.setItem('pngScalePct','150'); } catch(_) {}
         }
         // Popup size
-        if (popupSizeSlider) {
-          popupSizeSlider.value = '100';
+        if (popupSizeChoices) {
           if (popupSizeLabel) popupSizeLabel.textContent = '100%';
+          markPopupChoice(100);
           applyPopupScale(100);
           try { localStorage.setItem('popupScalePct','100'); } catch(_) {}
         }
@@ -1656,15 +1760,18 @@
         const musicLabel = document.getElementById('musicLabel');
         if (musicSlider) musicSlider.value = '50';
         if (musicLabel) musicLabel.textContent = '50%';
-        try {
-          if (window.bgAudioControls && window.bgAudioControls.setVolumePct) {
-            window.bgAudioControls.setVolumePct(50);
-          } else {
-            localStorage.setItem('musicVolPct','50');
-          }
+          try {
+            if (window.bgAudioControls && window.bgAudioControls.setVolumePct) {
+              window.bgAudioControls.setVolumePct(50);
+            } else {
+              localStorage.setItem('musicVolPct','50');
+            }
+          } catch(_) {}
+          // SFX mute reset
+          try { localStorage.setItem('sfxMuted','false'); } catch(_) {}
+          updateSfxMuteUI();
         } catch(_) {}
-      } catch(_) {}
-    }
+      }
     if (settingsBtn) settingsBtn.addEventListener('click', () => { settingsOpen ? closeSettings() : openSettings(); });
     const settingsClose = document.getElementById('settingsClose');
     if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
@@ -1702,6 +1809,29 @@
           }
           updateMusicMuteUI();
         } catch(_) {}
+      });
+    }
+    // SFX (sound effects) mute control
+    function isSfxMuted() {
+      try { return localStorage.getItem('sfxMuted') === 'true'; } catch(_) { return false; }
+    }
+    function setSfxMuted(m) {
+      try { localStorage.setItem('sfxMuted', String(!!m)); } catch(_) {}
+      try { if (window.sfxControls && window.sfxControls.setMuted) window.sfxControls.setMuted(!!m); } catch(_) {}
+      updateSfxMuteUI();
+    }
+    function updateSfxMuteUI(){
+      try {
+        if (!sfxMuteBtn) return;
+        const muted = isSfxMuted();
+        sfxMuteBtn.textContent = muted ? 'Unmute SFX' : 'Mute SFX';
+        sfxMuteBtn.setAttribute('aria-pressed', String(muted));
+      } catch(_) {}
+    }
+    if (sfxMuteBtn) {
+      sfxMuteBtn.addEventListener('click', () => {
+        const muted = isSfxMuted();
+        setSfxMuted(!muted);
       });
     }
     // Hide controls by default until settings opened
@@ -1835,7 +1965,7 @@
       canvas.style.cursor = hover ? 'pointer' : 'default';
       if (hover) {
         let asHtml = overBrand;
-        let txt = overBrand ? "<img src=\"assets/images/fashion_show_experience.png\" alt=\"Fashion Show Experience\" style=\"display:block; max-width:220px; max-height:140px;\" />" : ("Open \"" + (sec && sec.title ? sec.title : "Section") + "\"");
+    let txt = overBrand ? "<picture><source type=\"image/webp\" srcset=\"assets/images/fashion_show_experience.webp\"><img src=\"assets/images/fashion_show_experience.png\" alt=\"Fashion Show Experience\" style=\"display:block; max-width:220px; max-height:140px;\" /></picture>" : ("Open \"" + (sec && sec.title ? sec.title : "Section") + "\"");
         showHoverTip(e.clientX, e.clientY, txt, asHtml);
       } else {
         hideHoverTip();
@@ -2979,6 +3109,48 @@
         ensure: ensureGraph,
         kick: () => { unlock(); }
       };
+    })();
+  </script>
+  <!-- Sound effects manager: randomly plays camera shutter sounds when not muted -->
+  <script>
+    (function(){
+      const CAMERA_SOUNDS = [
+        'assets/sounds/Camera_0.wav',
+        'assets/sounds/Camera_1.wav',
+        'assets/sounds/Camera_2.wav',
+        'assets/sounds/Camera_3.wav',
+      ];
+      const state = { timer: null };
+      function readMuted(){
+        try { return localStorage.getItem('sfxMuted') === 'true'; } catch(_) { return false; }
+      }
+      function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+      function playCamera(){
+        try {
+          if (readMuted()) return;
+          const src = pick(CAMERA_SOUNDS);
+          const a = new Audio(src);
+          a.volume = 0.6; // base SFX volume
+          a.play().catch(()=>{});
+        } catch(_) {}
+      }
+      function schedule(){
+        clearTimeout(state.timer);
+        const delay = 1200 + Math.random()*2800; // 1.2s - 4s
+        state.timer = setTimeout(() => {
+          if (!readMuted() && document.visibilityState !== 'hidden') {
+            playCamera();
+          }
+          schedule();
+        }, delay);
+      }
+      // Public controls for SFX
+      window.sfxControls = {
+        setMuted: (m) => { try { localStorage.setItem('sfxMuted', String(!!m)); } catch(_) {} },
+        isMuted: () => readMuted(),
+      };
+      // Start scheduling immediately; playback will self-skip if muted or tab hidden
+      schedule();
     })();
   </script>
 </body>
