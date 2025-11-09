@@ -36,8 +36,8 @@
     #tooltip { position: fixed; padding: 8px 10px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; transform: translate(-50%, -120%); white-space: nowrap; z-index: 4; display: none; } /* Floating hint bubble */
     #hoverTip { position: fixed; padding: 6px 8px; background: rgba(20,20,30,0.9); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; transform: translate(calc(-100% - 12px), -10px); white-space: nowrap; z-index: 6; display: none; font-size: 12px; }
     #modalWrap { position: fixed; inset: 0; display: none; place-items: center; background: var(--modal-bg); backdrop-filter: blur(6px); z-index: 10; } /* Fullscreen modal overlay */
-    #modal { width: min(720px, 92vw); max-height: 80vh; overflow-y: auto; overflow-x: hidden; background: transparent; border: 0; border-radius: 0; box-shadow: none; } /* Modal scroll container; visual chrome moved to .popupInner */
-    #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; } /* Sticky modal header */
+    #modal { width: min(720px, 92vw); max-height: 80vh; overflow-y: auto; overflow-x: hidden; background: transparent; border: 0; border-radius: 0; box-shadow: none; scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; } /* Modal scroll container; visual chrome moved to .popupInner */
+    #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.5); } /* Sticky modal header - solid & above body */
     #modal .content { padding: 16px; } /* Modal content area */
     #closeModal { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px 10px; cursor: pointer; } /* Close button */
 
@@ -75,7 +75,7 @@
     #helpBtn { position: fixed; left: 10px; top: 52px; z-index: 9; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 12px; font-weight: 700; font-size: 16px; line-height: 1; width: 120px; height: 36px; display: grid; place-items: center; backdrop-filter: blur(8px); cursor: pointer; }
     #helpBtn:hover { background: rgba(255,255,255,0.16); }
     #settingsPanel { position: fixed; left: 10px; top: 46px; z-index: 9; width: min(90vw, 260px); max-height: calc(100vh - 60px); overflow-y: auto; overflow-x: hidden; display: none; background: transparent; color: var(--ui); border: 0; border-radius: 0; box-shadow: none; backdrop-filter: blur(10px); scrollbar-gutter: stable both-edges; padding-right: 12px; box-sizing: border-box; }
-    #settingsPanel header { position: sticky; top: 0; z-index: 1; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: rgba(20,20,28,0.95); }
+    #settingsPanel header { position: sticky; top: 0; z-index: 10; display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.15); background: #121219; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
     /* Popup chrome base */
     .popupInner {
       background: #121219;
@@ -85,6 +85,7 @@
       margin: 0 auto; /* keep centered within container */
       box-sizing: border-box;
       padding: 8px 10px;
+      position: relative; /* create stacking context for sticky header z-index */
     }
     /* Uniform scale for Settings (anchor top-left near screen edge) */
     #settingsPanel .popupInner {
@@ -96,15 +97,19 @@
       contain: layout paint;
     }
     /* Uniform scale for Modal (centered) */
-    #modal .popupInner {
+    /* Keep modal chrome stable; scale only the body to avoid header jitter */
+    #modal .popupInner { /* no transform here */ }
+    #modal .popupBody {
       transform: scale(var(--popup-scale));
-      transform-origin: top center;
-      width: calc((100% - 2px) / var(--popup-scale));
+      transform-origin: top left; /* anchor left so content never clips off-screen when zoomed in */
+      width: calc(100% * var(--popup-inner-wscale, 1));
+      max-width: 100%;
+      margin: 0; /* left‑align the scaled body under the header */
       will-change: transform;
       contain: layout paint;
     }
     #settingsPanel header strong { font-size: 13px; }
-    #settingsClose, #settingsReset, #musicPlayBtn { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; }
+    #settingsClose, #settingsReset, #musicMuteBtn { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; }
     #settingsReset { margin-right: 6px; }
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
@@ -161,6 +166,14 @@
   
   <div id="tooltip"></div> <!-- Floating tooltip that appears when close to a section -->
   <div id="hoverTip" aria-hidden="true"></div> <!-- Pointer hover hint for clickable areas -->
+  <!-- Endcap YouTube billboard overlay (world-anchored at far right). Positioned each frame. -->
+  <div id="endcapVideo" style="display:none; position:fixed; z-index:6; pointer-events:auto;">
+    <iframe id="endcapVideoFrame" width="560" height="315" frameborder="0" allowfullscreen
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      loading="lazy"
+      src="https://www.youtube.com/embed/lC0em_y158w?rel=0&modestbranding=1&playsinline=1">
+    </iframe>
+  </div>
   <button id="paparazziBtn" title="Toggle paparazzi" aria-pressed="true">Paparazzi: On</button>
   <div id="scrollWrap">
     <div class="title">Camera Lift <span id="zoomLabel"></span></div>
@@ -178,10 +191,18 @@
     <div class="title">Music Volume <span id="musicLabel"></span></div>
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
-  <button id="musicPlayBtn" style="display:none;" title="Play music" aria-label="Play music">Play Music</button>
+  <button id="musicMuteBtn" style="display:none;" title="Mute music" aria-label="Mute music">Mute Music</button>
   <div id="pngSizeWrap" style="display:none;">
     <div class="title">Stage Image Size <span id="pngSizeLabel"></span></div>
     <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="Stage Image Size" />
+  </div>
+  <div id="imgQualityWrap" style="display:none;">
+    <div class="title">Image Quality</div>
+    <select id="imgQualitySelect" aria-label="Image Quality">
+      <option value="auto">Auto (WebP if supported)</option>
+      <option value="webp">Faster (WebP)</option>
+      <option value="png">Sharper (PNG)</option>
+    </select>
   </div>
   <div id="modalWrap" aria-hidden="true"> <!-- Fullscreen modal overlay -->
     <div id="modal" role="dialog" aria-modal="true"> <!-- Modal container -->
@@ -190,8 +211,10 @@
           <strong id="modalTitle">Section</strong> <!-- Title is filled in dynamically -->
           <button id="closeModal" aria-label="Close">Close</button> <!-- Closes the modal -->
         </header>
-        <div class="content" id="modalContent"> <!-- Container for section HTML content -->
+        <div class="popupBody">
+          <div class="content" id="modalContent"> <!-- Container for section HTML content -->
           <!-- populated dynamically -->
+          </div>
         </div>
       </div>
     </div>
@@ -216,6 +239,27 @@
       el.textContent = 'Error: ' + (e?.message || 'unknown');
       document.body.appendChild(el);
     }, { once: true });
+    // IMAGE FORMAT SELECTION (WebP vs PNG)
+    function detectWebPSupport() {
+      try { const c = document.createElement('canvas'); return c.toDataURL && c.toDataURL('image/webp').indexOf('data:image/webp') === 0; } catch(_) { return false; }
+    }
+    const WEBP_SUPPORTED = detectWebPSupport();
+    function getImgQualityPref() { try { return (localStorage.getItem('imgQualityPref') || 'auto'); } catch(_) { return 'auto'; } }
+    function setImgQualityPref(v) { try { localStorage.setItem('imgQualityPref', String(v)); } catch(_) {} }
+    function resolveImgCandidates(pngPath) {
+      const pref = getImgQualityPref();
+      const wantWebp = (pref === 'webp') || (pref === 'auto' && WEBP_SUPPORTED);
+      const webpPath = pngPath.replace(/\.png($|\?)/i, '.webp$1');
+      const pngPathFixed = pngPath.replace(/\.webp($|\?)/i, '.png$1');
+      return wantWebp ? [webpPath, pngPathFixed] : [pngPathFixed, webpPath];
+    }
+    function smartLoadImage(img, pngPath, onReadyTrue, onFail){
+      const list = resolveImgCandidates(pngPath);
+      let i = 0;
+      img.onload = () => { if (onReadyTrue) onReadyTrue(); };
+      img.onerror = () => { i++; if (i < list.length) img.src = list[i]; else if (onFail) onFail(); };
+      img.src = list[0];
+    }
 
     // Basic touch capability hint (used for mobile-only layout tweaks)
     const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
@@ -282,7 +326,40 @@
       buildMarblePattern(); // Rebuild background texture for new size/theme
     }
     window.addEventListener('resize', resize); // Re-run on window resize
-    window.addEventListener('resize', () => { try { updateSettingsScrollPad(); } catch(_){} });
+    window.addEventListener('resize', () => { try { updateSettingsScrollPad(); updateModalScrollPad(); } catch(_){} });
+    // Draw avatar over the video area only
+    // Removed player overlay (avatar remains behind the video billboard by design)
+    // Position the endcap YouTube overlay in screen space to match the canvas billboard
+    function updateEndcapVideo(){
+      const host = document.getElementById('endcapVideo');
+      const frame = document.getElementById('endcapVideoFrame');
+      const r = (typeof view !== 'undefined') && view && view._endcap2BrandRect;
+      if (!host || !frame || !r) { if (host) host.style.display = 'none'; return; }
+      // Current scene transform
+      const s = (Number(view && view.scale) || 1) * (Number(view && view.globalScale) || 1);
+      const tx = Number(view && view._tx) || 0;
+      const ty = Number(view && view._ty) || 0;
+      const ox = Number(view && view.offsetX) || 0;
+      // slight negative pad tucks video under the border to hide any seams
+      const pad = -1;
+      const x = (r.x + pad + ox) * s + tx;
+      const y = (r.y + pad) * s + ty;
+      const w = Math.max(80, (r.w - pad*2) * s);
+      const hMax = Math.max(60, (r.h - pad*2) * s);
+      // 16:9 fit within the header frame
+      let h = Math.min(hMax, Math.round(w * 9/16));
+      let ww = Math.round(h * 16/9);
+      if (ww > w) { ww = Math.round(w); h = Math.round(w * 9/16); }
+      // Cull when off-screen
+      if (x + ww < -20 || x > vw + 20 || y + h < -20 || y > vh + 20) { host.style.display = 'none'; view._endcap2ScreenRect = null; return; }
+      host.style.display = 'block';
+      host.style.left = Math.round(x) + 'px';
+      host.style.top = Math.round(y) + 'px';
+      frame.style.width = ww + 'px';
+      frame.style.height = h + 'px';
+      // Expose screen-space rect for overlay drawing
+      view._endcap2ScreenRect = { x: Math.round(x), y: Math.round(y), w: ww, h: h };
+    }
     window.addEventListener('orientationchange', () => setTimeout(resize, 100));
     resize(); // Initialize canvas size immediately
 
@@ -299,12 +376,10 @@
     // Expose a setter for quick swaps via console if needed
 
     // Load per-door backdrop image (displayed behind opening curtains)
-    function loadDoorBackdrop(src) {
+    function loadDoorBackdrop(srcPng) {
       doorBackdropReady = false;
       doorBackdropImg = new Image();
-      doorBackdropImg.onload = () => { doorBackdropReady = true; };
-      doorBackdropImg.onerror = () => { doorBackdropReady = false; };
-      doorBackdropImg.src = src;
+      smartLoadImage(doorBackdropImg, srcPng, () => { doorBackdropReady = true; }, () => { doorBackdropReady = false; });
     }
     // Default filename expected alongside index.html; safe to replace at runtime
     loadDoorBackdrop('assets/images/door-backdrop.png');
@@ -315,9 +390,7 @@
       for (let i = 1; i <= count; i++) {
         const img = new Image();
         doorBackdropSet[i] = { img, ready: false };
-        img.onload = () => { doorBackdropSet[i].ready = true; };
-        img.onerror = () => { doorBackdropSet[i].ready = false; };
-        img.src = `assets/images/door-backdrop_${i}.png`;
+        smartLoadImage(img, `assets/images/door-backdrop_${i}.png`, () => { doorBackdropSet[i].ready = true; }, () => { doorBackdropSet[i].ready = false; });
       }
     }
     loadDoorBackdropSet(7);
@@ -328,14 +401,11 @@
     let paparazziLeftReady = false;
     let paparazziRightReady = false;
 
-    function loadPaparazziPair(leftSrc, rightSrc) {
+    function loadPaparazziPair(leftSrcPng, rightSrcPng) {
       paparazziLeftReady = paparazziRightReady = false;
-      paparazziLeftImg.onload = () => { paparazziLeftReady = true; };
-      paparazziRightImg.onload = () => { paparazziRightReady = true; };
-      paparazziLeftImg.onerror = () => { paparazziLeftReady = false; };
-      paparazziRightImg.onerror = () => { paparazziRightReady = false; };
-      paparazziLeftImg.src = leftSrc;
-      paparazziRightImg.src = rightSrc;
+      paparazziLeftImg = new Image(); paparazziRightImg = new Image();
+      smartLoadImage(paparazziLeftImg, leftSrcPng, () => { paparazziLeftReady = true; }, () => { paparazziLeftReady = false; });
+      smartLoadImage(paparazziRightImg, rightSrcPng, () => { paparazziRightReady = true; }, () => { paparazziRightReady = false; });
     }
     // Default pair (files should exist next to index.html)
     loadPaparazziPair('assets/images/paparazzi_left.png', 'assets/images/paparazzi_right.png');
@@ -345,26 +415,21 @@
     let chairImg = new Image();
     let statueReady = false;
     let chairReady = false;
-    function loadStageProps(statueSrc, chairSrc) {
+    function loadStageProps(statueSrcPng, chairSrcPng) {
       statueReady = chairReady = false;
-      statueImg.onload = () => { statueReady = true; };
-      statueImg.onerror = () => { statueReady = false; };
-      chairImg.onload = () => { chairReady = true; };
-      chairImg.onerror = () => { chairReady = false; };
-      statueImg.src = statueSrc;
-      chairImg.src = chairSrc;
+      statueImg = new Image(); chairImg = new Image();
+      smartLoadImage(statueImg, statueSrcPng, () => { statueReady = true; }, () => { statueReady = false; });
+      smartLoadImage(chairImg, chairSrcPng, () => { chairReady = true; }, () => { chairReady = false; });
     }
     loadStageProps('assets/images/gary_statue.png', 'assets/images/judge_chair.png');
 
     // Limo image at far left of the catwalk
     let limoImg = new Image();
     let limoReady = false;
-    function loadLimo(src) {
+    function loadLimo(srcPng) {
       limoReady = false;
       limoImg = new Image();
-      limoImg.onload = () => { limoReady = true; };
-      limoImg.onerror = () => { limoReady = false; };
-      limoImg.src = src;
+      smartLoadImage(limoImg, srcPng, () => { limoReady = true; }, () => { limoReady = false; });
     }
     loadLimo('assets/images/limo_0.png');
     // Removed runtime asset swap helpers for leaner API
@@ -399,7 +464,13 @@
     };
     AVATAR.img.onload = () => { AVATAR.ready = true; };
     AVATAR.img.onerror = () => { AVATAR.ready = false; };
-    AVATAR.img.src = 'assets/images/avatar_sprite_sheet.png';
+    function loadAvatarSprite(){
+      const list = resolveImgCandidates('assets/images/avatar_sprite_sheet.png');
+      let i = 0;
+      AVATAR.img.onerror = () => { i++; if (i < list.length) AVATAR.img.src = list[i]; else AVATAR.ready = false; };
+      AVATAR.img.src = list[0];
+    }
+    loadAvatarSprite();
     // Console tuning helpers removed for leaner surface
 
     // Draw alternating paparazzi tiles under the runway
@@ -875,8 +946,102 @@
       }
       ctx.restore();
 
-      // store clickable rect for endcap branding
+      // store clickable rect for endcap branding (and reuse as video anchor)
       view._endcapBrandRect = { x: dx, y: dy, w: dw, h: dh };
+      ctx.restore();
+    }
+
+    // Draw a third billboard to the right of the endcap (extra space)
+    function drawExtraEndcapBranding(endX) {
+      // Independent of branding image: size a 16:9 frame that fits between curtain top and carpet
+      const curtainTop = Math.max(60, world.runwayY() - (220 + CURTAIN_LIFT));
+      const carpetTop = world.runwayY() - 2;
+      const padAboveCarpet = 18;
+      const maxW = Math.min(560, vw * 0.55) * PNG_SCALE;
+      const maxH = Math.min(315, Math.max(80, carpetTop - padAboveCarpet - curtainTop)) * PNG_SCALE;
+      // Fit 16:9 within max box
+      let dw = Math.floor(Math.min(maxW, maxH * 16/9));
+      let dh = Math.floor(dw * 9/16);
+      const dx = Math.floor((endX - camera.x) - dw / 2);
+      const dy = Math.floor(carpetTop - padAboveCarpet - dh - 95);
+      ctx.save();
+      const gold = getComputedStyle(document.documentElement).getPropertyValue('--runway-edge') || '#f1cf63';
+      ctx.fillStyle = gold;
+      const poleWidth = 20;
+      const poleInset = 12;
+      const extraInset = 30;
+      const poleTop = dy + dh;
+      // Put post bottoms between the carpet and the top of the first paparazzi row
+      const isSmallScreenP = (vw < 900) || (vh < 600);
+      const paparazziTopY = Math.floor(world.runwayY() + (isSmallScreenP ? 75 : 105));
+      const poleBottom = Math.floor(paparazziTopY - 10); // a hair above the paparazzi strip
+      // Slightly shift posts to the right so they sit on the foreground side
+      const postShiftX = 12;
+      const leftPoleX = dx + poleInset + extraInset + postShiftX;
+      const rightPoleX = dx + dw - poleInset - poleWidth - extraInset + postShiftX;
+      if (poleBottom > poleTop) {
+        ctx.fillRect(leftPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        ctx.fillRect(rightPoleX, poleTop, poleWidth, poleBottom - poleTop);
+        ctx.beginPath(); ctx.arc(leftPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rightPoleX + poleWidth/2, poleBottom, 3.5, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 8;
+      // Solid gold panel behind the video to eliminate any gaps
+      ctx.fillStyle = gold;
+      ctx.fillRect(dx, dy, dw, dh);
+      // No branding image: this frame is reserved for the video overlay
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = gold;
+      ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
+      // Lights (reuse endcap pattern, slight phase offset)
+      const t2 = performance.now() * 0.001 + 1.7;
+      const bulbSpacing2 = 22;
+      const bulbR2 = 3;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (let x = dx; x <= dx + dw; x += bulbSpacing2) {
+        const i = Math.floor((x - dx) / bulbSpacing2);
+        const phase = i * 0.6 + 0.9;
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82;
+        const gx = x, gy = dy - 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR2 * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      for (let x = dx + bulbSpacing2/2; x <= dx + dw; x += bulbSpacing2) {
+        const i = Math.floor((x - dx) / bulbSpacing2) + 17;
+        const phase = i * 0.6 + 0.9;
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.18 + Math.pow(pulse, 6) * 0.82;
+        const gx = x, gy = dy + dh + 6;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bulbR2 * 4.2);
+        g.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      for (let y = dy + 12; y <= dy + dh - 12; y += bulbSpacing2 * 1.1) {
+        const i = Math.floor((y - dy) / bulbSpacing2);
+        const phase = i * 0.7 + 0.9;
+        const pulse = Math.max(0, Math.sin(t2 * 3.0 + phase));
+        const a = 0.12 + Math.pow(pulse, 6) * 0.75;
+        const gx1 = dx - 6, gy1 = y;
+        const g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, bulbR2 * 4.2);
+        g1.addColorStop(0, `rgba(241,207,99,${Math.min(1,a)})`);
+        g1.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(gx1, gy1, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+        const gx2 = dx + dw + 6, gy2 = y;
+        const g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, bulbR2 * 4.2);
+        g2.addColorStop(0, `rgba(241,207,99,${Math.min(1,a*0.9)})`);
+        g2.addColorStop(1, 'rgba(241,207,99,0)');
+        ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(gx2, gy2, bulbR2 * 3.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+      // Store rect for future use
+      view._endcap2BrandRect = { x: dx, y: dy, w: dw, h: dh };
       ctx.restore();
     }
 
@@ -1124,6 +1289,8 @@
     const END_BILLBOARD_OFFSET = 800; // push end billboard farther to the right
     const TAIL_GAP = 800; // still add world space after last door for padding
     const ENDCAP_X = Math.floor(lastCenter + END_BILLBOARD_OFFSET);
+    // Place the second billboard further to the right, in the empty space
+    const ENDCAP2_X = Math.floor(ENDCAP_X + 1150); // nudge further right into open area
     // Add generous walking room on both ends for future easter eggs/partners
     const EXTRA_WALK_LEFT = 2000;
     const EXTRA_WALK_RIGHT = 2000;
@@ -1174,9 +1341,27 @@
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsContent = document.getElementById('settingsContent');
     const pngSizeWrap = document.getElementById('pngSizeWrap');
-    const musicPlayBtn = document.getElementById('musicPlayBtn');
+    const imgQualityWrap = document.getElementById('imgQualityWrap');
+    const imgQualitySelect = document.getElementById('imgQualitySelect');
+    const musicMuteBtn = document.getElementById('musicMuteBtn');
     const pngSizeSlider = document.getElementById('pngSizeSlider');
     const pngSizeLabel = document.getElementById('pngSizeLabel');
+    // Image Quality selector wiring
+    if (imgQualitySelect) {
+      try { imgQualitySelect.value = getImgQualityPref(); } catch(_) {}
+      imgQualitySelect.addEventListener('change', () => {
+        const v = imgQualitySelect.value || 'auto';
+        setImgQualityPref(v);
+        // Reload canvas images with new preference
+        loadBranding('assets/images/fashion-show-branding.png');
+        loadDoorBackdrop('assets/images/door-backdrop.png');
+        loadDoorBackdropSet(7);
+        loadPaparazziPair('assets/images/paparazzi_left.png','assets/images/paparazzi_right.png');
+        loadStageProps('assets/images/gary_statue.png','assets/images/judge_chair.png');
+        loadLimo('assets/images/limo_0.png');
+        loadAvatarSprite();
+      });
+    }
     let settingsOpen = false;
     const press = (k, v) => { keys[k] = v; }; // Helper to set key state
     if (btnLeft) {
@@ -1352,7 +1537,10 @@
       const s = Math.max(0.5, Math.min(1.5, (Number(pct)||100)/100));
       try {
         document.documentElement.style.setProperty('--popup-scale', String(s));
+        const ws = s > 1 ? (1/s) : 1; // keep modal body inside container when zoomed in
+        document.documentElement.style.setProperty('--popup-inner-wscale', String(ws));
         updateSettingsScrollPad();
+        updateModalScrollPad();
       } catch(_) {}
     }
     if (popupSizeSlider) {
@@ -1384,8 +1572,9 @@
       try { settingsContent.appendChild(scrollWrap); scrollWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(popupSizeWrap); popupSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(pngSizeWrap); pngSizeWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(imgQualityWrap); imgQualityWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
-      try { settingsContent.appendChild(musicPlayBtn); musicPlayBtn.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(musicMuteBtn); musicMuteBtn.style.display = ''; updateMusicMuteUI(); } catch(_){ }
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
       try { updateSettingsScrollPad(); } catch(_){}
@@ -1451,10 +1640,37 @@
     if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
     const settingsReset = document.getElementById('settingsReset');
     if (settingsReset) settingsReset.addEventListener('click', () => resetSettings());
-    if (musicPlayBtn) {
-      musicPlayBtn.addEventListener('click', () => {
+    // Play button removed; mobile unlock happens on first gesture
+    function updateMusicMuteUI(){
+      try {
+        const a = document.getElementById('bgAudio');
+        if (!musicMuteBtn || !a) return;
+        const volPct = (window.bgAudioControls && window.bgAudioControls.getVolumePct) ? window.bgAudioControls.getVolumePct() : Math.round((a.volume||0)*100);
+        const muted = a.muted || volPct === 0;
+        musicMuteBtn.textContent = muted ? 'Unmute Music' : 'Mute Music';
+        musicMuteBtn.setAttribute('aria-pressed', String(muted));
+      } catch(_) {}
+    }
+    if (musicMuteBtn) {
+      musicMuteBtn.addEventListener('click', () => {
         try {
-          if (window.bgAudioControls && window.bgAudioControls.kick) window.bgAudioControls.kick();
+          const a = document.getElementById('bgAudio');
+          if (!a) return;
+          if (a.muted || ((window.bgAudioControls && window.bgAudioControls.getVolumePct && window.bgAudioControls.getVolumePct() === 0))) {
+            // Unmute and ensure some audible volume
+            a.muted = false;
+            if (window.bgAudioControls && window.bgAudioControls.getVolumePct && window.bgAudioControls.getVolumePct() === 0 && window.bgAudioControls.setVolumePct) {
+              window.bgAudioControls.setVolumePct(50);
+            } else if (a.volume === 0) {
+              a.volume = 0.5;
+            }
+            if (window.bgAudioControls && window.bgAudioControls.ensure) window.bgAudioControls.ensure();
+            a.play().catch(()=>{});
+          } else {
+            // Mute
+            a.muted = true;
+          }
+          updateMusicMuteUI();
         } catch(_) {}
       });
     }
@@ -1606,6 +1822,14 @@
       modalTitle.textContent = title; // Set title text
       modalContent.innerHTML = html; // Inject provided HTML content
       modalWrap.style.display = 'grid'; // Reveal overlay (CSS grid centers modal)
+      // Always start scrolled to top for each door
+      try {
+        const modal = document.getElementById('modal');
+        if (modal) modal.scrollTop = 0;
+        const body = document.querySelector('#modal .popupBody');
+        if (body) body.scrollTop = 0;
+      } catch(_) {}
+      try { requestAnimationFrame(() => updateModalScrollPad()); } catch(_) {}
     }
     function closeModal() { // Hide the modal overlay
       modalWrap.style.display = 'none';
@@ -1746,6 +1970,29 @@
       tooltip.style.cursor = 'default';
       tooltip.removeAttribute('title');
     } // Hide tooltip
+    // Ensure the modal background extends to the end of scaled text
+    function updateModalScrollPad(){
+      try {
+        const modal = document.getElementById('modal');
+        if (!modal || modal.style.display === 'none') return;
+        const inner = modal.querySelector('.popupInner');
+        const body = inner && inner.querySelector('.popupBody');
+        if (!inner || !body) return;
+        const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--popup-scale')) || 1;
+        let spacer = inner.querySelector('#modalScrollSpacer');
+        if (s <= 1) { if (spacer) spacer.style.height = '0px'; return; }
+        const unscaled = body.scrollHeight || body.offsetHeight || 0;
+        const extra = Math.max(0, Math.ceil(unscaled * (s - 1)));
+        if (!spacer) {
+          spacer = document.createElement('div'); spacer.id = 'modalScrollSpacer';
+          spacer.style.width = '1px'; spacer.style.height = extra + 'px';
+          spacer.style.pointerEvents = 'none'; spacer.style.opacity = '0';
+          inner.appendChild(spacer);
+        } else {
+          spacer.style.height = extra + 'px';
+        }
+      } catch(_) {}
+    }
     // Click the tooltip to open its target section (if any)
     tooltip.addEventListener('click', () => {
       const key = tooltip.dataset.openKey;
@@ -2547,7 +2794,7 @@
 
       // Draw branding/billboard in front of backstage props
       drawSpawnBranding();      // Branding at spawn, stays put as you walk away
-      drawEndcapBranding(ENDCAP_X); // Second branding after last door for a visual endcap
+      drawEndcapBranding(ENDCAP_X); // Logo billboard at right endcap
       if (window.paparazziOn !== false) drawPaparazziStrip(); // PNG robots row
       // world-anchored positioning removed; controls live in Settings only
 
@@ -2561,6 +2808,10 @@
       
        // Foreground silhouettes and flashes (behind player)
       drawPlayer(); // Draw the model/figure
+      // Draw the video billboard posts/frame in the foreground so the player passes behind
+      drawExtraEndcapBranding(ENDCAP2_X);
+      try { updateEndcapVideo(); } catch(_) {}
+      
 
       // edge fades to soften edges (disabled by default to avoid visible side bands)
       const bgCol2 = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#12090c';
@@ -2637,6 +2888,8 @@
         if (gain) gain.gain.value = pct/100;
         // Always set element volume as a fallback (caps at 1.0)
         audio.volume = Math.min(1, pct/100);
+        // Auto-unmute when volume is raised above 0 via slider
+        if (pct > 0) audio.muted = false;
       }
       function wireSlider() {
         const slider = document.getElementById('musicSlider');
