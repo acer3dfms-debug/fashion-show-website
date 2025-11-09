@@ -101,7 +101,7 @@
       contain: layout paint;
     }
     #settingsPanel header strong { font-size: 13px; }
-    #settingsClose, #settingsReset { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+    #settingsClose, #settingsReset, #musicPlayBtn { appearance: none; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: var(--ui); border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer; }
     #settingsReset { margin-right: 6px; }
     #settingsContent { padding: 10px; display: grid; gap: 10px; }
     /* When inside settings, make controls flow statically */
@@ -175,6 +175,7 @@
     <div class="title">Music Volume <span id="musicLabel"></span></div>
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
+  <button id="musicPlayBtn" style="display:none;" title="Play music" aria-label="Play music">Play Music</button>
   <div id="pngSizeWrap" style="display:none;">
     <div class="title">Stage Image Size <span id="pngSizeLabel"></span></div>
     <input id="pngSizeSlider" type="range" min="50" max="150" step="5" aria-label="Stage Image Size" />
@@ -1169,6 +1170,7 @@
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsContent = document.getElementById('settingsContent');
     const pngSizeWrap = document.getElementById('pngSizeWrap');
+    const musicPlayBtn = document.getElementById('musicPlayBtn');
     const pngSizeSlider = document.getElementById('pngSizeSlider');
     const pngSizeLabel = document.getElementById('pngSizeLabel');
     let settingsOpen = false;
@@ -1348,6 +1350,7 @@
       try { settingsContent.appendChild(popupSizeWrap); popupSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(pngSizeWrap); pngSizeWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(musicWrap); musicWrap.style.display = ''; } catch(_){ }
+      try { settingsContent.appendChild(musicPlayBtn); musicPlayBtn.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}
     }
@@ -1412,6 +1415,13 @@
     if (settingsClose) settingsClose.addEventListener('click', () => closeSettings());
     const settingsReset = document.getElementById('settingsReset');
     if (settingsReset) settingsReset.addEventListener('click', () => resetSettings());
+    if (musicPlayBtn) {
+      musicPlayBtn.addEventListener('click', () => {
+        try {
+          if (window.bgAudioControls && window.bgAudioControls.kick) window.bgAudioControls.kick();
+        } catch(_) {}
+      });
+    }
     // Hide controls by default until settings opened
     if (helpBtn) helpBtn.addEventListener('click', () => {
       // Open the same modal content as the 'about' door
@@ -2542,20 +2552,22 @@
       if (!audio) return;
       let ctx = null, source = null, gain = null;
       const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-      // Pick best-supported source for this browser (favor AAC/MP3 for iOS)
+      // Provide multiple sources with fallback; browsers pick the first playable/available
       function chooseAudioSource() {
         try {
+          // Order: MP3 (Chrome/Android/iOS), M4A (iOS Safari), OGG (Firefox/Chrome desktop)
           const candidates = [
-            { src: 'assets/sounds/fashion_show_song_0.m4a', type: 'audio/mp4' },
             { src: 'assets/sounds/fashion_show_song_0.mp3', type: 'audio/mpeg' },
+            { src: 'assets/sounds/fashion_show_song_0.m4a', type: 'audio/mp4' },
             { src: 'assets/sounds/fashion_show_song_0.ogg', type: 'audio/ogg' },
           ];
+          audio.innerHTML = '';
           for (const c of candidates) {
-            const ok = audio.canPlayType ? audio.canPlayType(c.type) : '';
-            if (ok === 'probably' || ok === 'maybe') { audio.src = c.src; return; }
+            const s = document.createElement('source');
+            s.src = c.src; s.type = c.type;
+            audio.appendChild(s);
           }
-          // fallback to ogg if detection unavailable
-          if (!audio.src) audio.src = 'assets/sounds/fashion_show_song_0.ogg';
+          audio.load();
         } catch(_) {}
       }
       chooseAudioSource();
