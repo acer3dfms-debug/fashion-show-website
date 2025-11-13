@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
+﻿<!DOCTYPE html> <!-- Tell the browser this is an HTML5 document -->
 <html lang="en"> <!-- Root element with language set to English -->
 <head>
   <meta charset="utf-8" /> <!-- Use UTF-8 character encoding -->
@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <title>Fashion Show</title> <!-- Browser tab title -->
+  <link rel="icon" type="image/png" href="assets/images/judge_chair.png" />
   <style>
     :root { /* CSS variables for theme colors used throughout */
       --bg: #15171c;            /* Dark grey marble base background */
@@ -28,30 +29,16 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* Nice default font stack */
       overflow: hidden; /* Hide scrollbars; camera handles movement */
     }
+    @media (max-width: 640px) {
+      body {
+        padding-bottom: 72px;
+        box-sizing: border-box;
+      }
+    }
     /* Keep CTA button styling used inside modals */
     .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); }
     .navBtn:hover { background: rgba(255,255,255,0.18); }
-    #legend {
-      --legend-scale: 2;
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      z-index: 8;
-      font-size: 12px;
-      line-height: 1.4;
-      padding: 8px 28px 8px 10px;
-      border-radius: 12px;
-      max-width: min(92vw, 420px);
-      overflow-wrap: anywhere;
-      background: #1e2128;
-      color: var(--accent);
-      font-weight: 700;
-      border: 1px solid rgba(241,207,99,0.6);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25);
-      transform-origin: bottom left;
-      transform: scale(var(--legend-scale));
-      transition: transform 0.2s ease;
-    } /* On-screen help (tutorial) */
+    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 8; font-size: 12px; line-height: 1.4; padding: 8px 28px 8px 10px; border-radius: 12px; max-width: min(92vw, 420px); overflow-wrap: anywhere; background: #1e2128; color: var(--accent); font-weight: 700; border: 1px solid rgba(241,207,99,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); transform-origin: bottom left; transform: scale(2); } /* On-screen help (tutorial) */
     #legend b { color: var(--accent); }
     #legend .legendClose { position: absolute; top: 6px; right: 8px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
     #legend .legendClose:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
@@ -1487,9 +1474,6 @@
         window.paparazziOn = !window.paparazziOn;
         paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
         paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
-        if (window.cameraSoundControls && typeof window.cameraSoundControls.setEnabled === 'function') {
-          window.cameraSoundControls.setEnabled(window.paparazziOn);
-        }
       });
     }
     // Toggle on-screen controls (lower-left gamepad buttons)
@@ -1777,18 +1761,8 @@
       'assets/sounds/Step_Run_3.wav',
       'assets/sounds/Step_Run_4.wav',
     ];
-    const FOOTSTEP_STOP_SOUND = 'assets/sounds/Step_Stop_0.wav';
-    const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.48 };
+    const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.45 };
     let footstepElapsed = 0;
-    function playFootstepStopSound() {
-      try {
-        if (isSfxMuted()) return;
-        const pct = getSfxVolumePctForUI();
-        const a = new Audio(FOOTSTEP_STOP_SOUND);
-        a.volume = Math.max(0, Math.min(1, pct / 100));
-        a.play().catch(()=>{});
-      } catch(_) {}
-    }
     function pickFootstepSound(list) {
       if (!Array.isArray(list) || list.length === 0) return null;
       return list[Math.floor(Math.random() * list.length)];
@@ -1802,9 +1776,7 @@
         const pct = getSfxVolumePctForUI();
         if (pct <= 0) return;
         const audio = new Audio(src);
-        const normalized = Math.max(0, Math.min(1, pct / 100));
-        const scale = isRunning ? 0.5 : 1;
-        audio.volume = Math.min(1, normalized * scale);
+        audio.volume = Math.min(1, Math.max(0, pct / 100));
         audio.play().catch(() => {});
       } catch(_) {}
     }
@@ -2221,26 +2193,6 @@
           legend.style.display = 'none';
         });
       }
-    })();
-
-    (function scaleLegendForSmallScreens(){
-      const legend = document.getElementById('legend');
-      if (!legend) return;
-      function updateScale() {
-        const width = window.innerWidth || document.documentElement.clientWidth;
-        const height = window.innerHeight || document.documentElement.clientHeight;
-        const isPortrait = height >= width;
-        let scale = 2;
-        if (isPortrait) {
-          if (width <= 360) scale = 1;
-          else if (width <= 480) scale = 1.15;
-          else if (width <= 640) scale = 1.35;
-          else scale = 1.55;
-        }
-        legend.style.setProperty('--legend-scale', scale.toFixed(2));
-      }
-      updateScale();
-      window.addEventListener('resize', updateScale);
     })();
 
     // TOOLTIP
@@ -2963,7 +2915,6 @@
     // drawPaparazziForeground() removed (unused)
 
     function update(dt) { // Update simulation for one frame
-      const wasWalkingPrev = player.walking;
       player.walking = false; // Reset walking flag
       const isRunning = (keys.runToggle || keys.shiftRun); // effective sprint: toggle OR Shift
       const runMul = isRunning ? 3.6 : 1; // sprint speed multiplier
@@ -2997,9 +2948,6 @@
         }
       } else {
         footstepElapsed = 0;
-      }
-      if (wasWalkingPrev && !player.walking) {
-        playFootstepStopSound();
       }
 
       // Update avatar sprite animation (idle/walk + facing)
@@ -3276,10 +3224,6 @@
       const SFX_VOLUME_STORAGE_KEY = 'sfxVolumePct';
       const SFX_VOLUME_DEFAULT = 6;
       const state = { timer: null, volumePct: SFX_VOLUME_DEFAULT };
-      let cameraSoundsEnabled = window.paparazziOn !== false;
-      function setCameraSoundsEnabled(on) {
-        cameraSoundsEnabled = Boolean(on);
-      }
       function clampSfxVolumePct(value) {
         const n = Number(value);
         if (!Number.isFinite(n)) return SFX_VOLUME_DEFAULT;
@@ -3304,18 +3248,17 @@
       function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
       function playCamera(){
         try {
-          if (!cameraSoundsEnabled) return;
           if (readMuted()) return;
           const src = pick(CAMERA_SOUNDS);
           const a = new Audio(src);
-          const vol = Math.max(0, Math.min(1, (state.volumePct / 100) * 0.5));
+          const vol = Math.max(0, Math.min(1, state.volumePct / 100));
           a.volume = vol;
           a.play().catch(()=>{});
         } catch(_) {}
       }
       function schedule(){
         clearTimeout(state.timer);
-        const delay = (1200 + Math.random()*2800) * 0.6; // slower tempo (approx 0.72s - 2.4s)
+        const delay = 1200 + Math.random()*2800; // 1.2s - 4s
         state.timer = setTimeout(() => {
           if (!readMuted() && document.visibilityState !== 'hidden') {
             playCamera();
@@ -3329,10 +3272,6 @@
         isMuted: () => readMuted(),
         setVolumePct,
         getVolumePct: () => state.volumePct,
-      };
-      window.cameraSoundControls = {
-        setEnabled: setCameraSoundsEnabled,
-        isEnabled: () => cameraSoundsEnabled,
       };
       // Start scheduling immediately; playback will self-skip if muted or tab hidden
       schedule();
