@@ -31,7 +31,27 @@
     /* Keep CTA button styling used inside modals */
     .navBtn { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 6px 10px; white-space: nowrap; cursor: pointer; backdrop-filter: blur(8px); }
     .navBtn:hover { background: rgba(255,255,255,0.18); }
-    #legend { position: fixed; bottom: 10px; left: 10px; z-index: 8; font-size: 12px; line-height: 1.4; padding: 8px 28px 8px 10px; border-radius: 12px; max-width: min(92vw, 420px); overflow-wrap: anywhere; background: #1e2128; color: var(--accent); font-weight: 700; border: 1px solid rgba(241,207,99,0.6); box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25); transform-origin: bottom left; transform: scale(2); } /* On-screen help (tutorial) */
+    #legend {
+      --legend-scale: 2;
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      z-index: 8;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 8px 28px 8px 10px;
+      border-radius: 12px;
+      max-width: min(92vw, 420px);
+      overflow-wrap: anywhere;
+      background: #1e2128;
+      color: var(--accent);
+      font-weight: 700;
+      border: 1px solid rgba(241,207,99,0.6);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35) inset, 0 1px 0 rgba(241,207,99,0.25);
+      transform-origin: bottom left;
+      transform: scale(var(--legend-scale));
+      transition: transform 0.2s ease;
+    } /* On-screen help (tutorial) */
     #legend b { color: var(--accent); }
     #legend .legendClose { position: absolute; top: 6px; right: 8px; width: 18px; height: 18px; border-radius: 50%; appearance: none; border: 1px solid rgba(241,207,99,0.6); background: #1e2128; color: var(--accent); font-size: 12px; line-height: 16px; padding: 0; cursor: pointer; display: grid; place-items: center; }
     #legend .legendClose:hover { background: #242834; border-color: rgba(241,207,99,0.8); }
@@ -157,7 +177,7 @@
     #settingsPanel #popupSizeWrap,
     #settingsPanel #pngSizeWrap { padding-right: 16px; }
     #settingsPanel #scrollWrap .title, #settingsPanel #musicWrap .title, #settingsPanel #controlsSizeWrap .title, #settingsPanel #popupSizeWrap .title, #settingsPanel #pngSizeWrap .title { margin: 0; font-size: 12px; opacity: 0.9; display:flex; align-items:center; justify-content: space-between; gap:8px; }
-    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider, #settingsPanel #popupSizeSlider, #settingsPanel #pngSizeSlider { width: calc(100% - 24px); margin: 0 12px; display: block; box-sizing: border-box; }
+    #settingsPanel #zoomSlider, #settingsPanel #musicSlider, #settingsPanel #controlsSizeSlider, #settingsPanel #popupSizeSlider, #settingsPanel #pngSizeSlider, #settingsPanel #sfxSlider { width: calc(100% - 24px); margin: 0 12px; display: block; box-sizing: border-box; }
     /* Segmented buttons for Popup Zoom */
     /* Use full-width grid so backdrop fully covers chips */
     #settingsPanel #popupSizeChoices { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: auto; grid-column-gap: 6px; grid-row-gap: 6px; align-items: center; margin: 4px 2px 2px; width: 100%; justify-items: stretch; }
@@ -248,9 +268,10 @@
     <input id="musicSlider" type="range" min="0" max="150" step="1" aria-label="Music Volume" />
   </div>
   <button id="musicMuteBtn" style="display:none;" title="Mute music" aria-label="Mute music">Mute Music</button>
-  <!-- Sound Effects controls (mute only for now) -->
+  <!-- Sound Effects controls with adjustable volume -->
   <div id="sfxWrap" style="display:none;">
-    <div class="title">Sound Effects</div>
+    <div class="title">Sound Effects <span id="sfxVolumeLabel"></span></div>
+    <input id="sfxSlider" type="range" min="0" max="100" step="1" aria-label="Sound Effects Volume" />
   </div>
   <button id="sfxMuteBtn" style="display:none;" title="Mute sound effects" aria-label="Mute sound effects">Mute SFX</button>
   <div id="pngSizeWrap" style="display:none;">
@@ -1403,7 +1424,11 @@
     const imgQualitySelect = document.getElementById('imgQualitySelect');
     const musicMuteBtn = document.getElementById('musicMuteBtn');
     const sfxMuteBtn = document.getElementById('sfxMuteBtn');
+    const sfxSlider = document.getElementById('sfxSlider');
+    const sfxVolumeLabel = document.getElementById('sfxVolumeLabel');
     const pngSizeSlider = document.getElementById('pngSizeSlider');
+    const SFX_VOLUME_STORAGE_KEY = 'sfxVolumePct';
+    const SFX_VOLUME_DEFAULT = 6;
     const pngSizeLabel = document.getElementById('pngSizeLabel');
     // Image Quality selector wiring
     if (imgQualitySelect) {
@@ -1462,6 +1487,9 @@
         window.paparazziOn = !window.paparazziOn;
         paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
         paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
+        if (window.cameraSoundControls && typeof window.cameraSoundControls.setEnabled === 'function') {
+          window.cameraSoundControls.setEnabled(window.paparazziOn);
+        }
       });
     }
     // Toggle on-screen controls (lower-left gamepad buttons)
@@ -1697,6 +1725,89 @@
         document.documentElement.style.setProperty('--settings-safe', safe + 'px');
       } catch(_) {}
     }// Recompute chip padding/placement on resize as well// SETTINGS PANEL WIRES
+    function clampSfxVolumePct(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return SFX_VOLUME_DEFAULT;
+      return Math.max(0, Math.min(100, Math.round(n)));
+    }
+    function getSfxVolumePctForUI() {
+      try {
+        const getter = window.sfxControls && window.sfxControls.getVolumePct;
+        if (typeof getter === 'function') {
+          const val = Number(getter());
+          if (Number.isFinite(val)) return clampSfxVolumePct(val);
+        }
+      } catch(_) {}
+      try {
+        const stored = Number(localStorage.getItem(SFX_VOLUME_STORAGE_KEY));
+        if (Number.isFinite(stored)) return clampSfxVolumePct(stored);
+      } catch(_) {}
+      return SFX_VOLUME_DEFAULT;
+    }
+    function updateSfxVolumeUI() {
+      try {
+        const pct = getSfxVolumePctForUI();
+        if (sfxSlider) sfxSlider.value = String(pct);
+        if (sfxVolumeLabel) sfxVolumeLabel.textContent = pct + '%';
+      } catch(_) {}
+    }
+    function applySfxVolumePct(value) {
+      try {
+        const pct = clampSfxVolumePct(value);
+        if (window.sfxControls && typeof window.sfxControls.setVolumePct === 'function') {
+          window.sfxControls.setVolumePct(pct);
+        } else {
+          localStorage.setItem(SFX_VOLUME_STORAGE_KEY, String(pct));
+        }
+        if (sfxSlider) sfxSlider.value = String(pct);
+        if (sfxVolumeLabel) sfxVolumeLabel.textContent = pct + '%';
+      } catch(_) {}
+    }
+    const FOOTSTEP_WALK_SOUNDS = [
+      'assets/sounds/Step_Walk_0.wav',
+      'assets/sounds/Step_Walk_1.wav',
+      'assets/sounds/Step_Walk_2.wav',
+      'assets/sounds/Step_Walk_3.wav',
+      'assets/sounds/Step_Walk_4.wav',
+    ];
+    const FOOTSTEP_RUN_SOUNDS = [
+      'assets/sounds/Step_Run_0.wav',
+      'assets/sounds/Step_Run_1.wav',
+      'assets/sounds/Step_Run_2.wav',
+      'assets/sounds/Step_Run_3.wav',
+      'assets/sounds/Step_Run_4.wav',
+    ];
+    const FOOTSTEP_STOP_SOUND = 'assets/sounds/Step_Stop_0.wav';
+    const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.48 };
+    let footstepElapsed = 0;
+    function playFootstepStopSound() {
+      try {
+        if (isSfxMuted()) return;
+        const pct = getSfxVolumePctForUI();
+        const a = new Audio(FOOTSTEP_STOP_SOUND);
+        a.volume = Math.max(0, Math.min(1, pct / 100));
+        a.play().catch(()=>{});
+      } catch(_) {}
+    }
+    function pickFootstepSound(list) {
+      if (!Array.isArray(list) || list.length === 0) return null;
+      return list[Math.floor(Math.random() * list.length)];
+    }
+    function playFootstepSound(isRunning) {
+      try {
+        if (isSfxMuted()) return;
+        const list = isRunning ? FOOTSTEP_RUN_SOUNDS : FOOTSTEP_WALK_SOUNDS;
+        const src = pickFootstepSound(list);
+        if (!src) return;
+        const pct = getSfxVolumePctForUI();
+        if (pct <= 0) return;
+        const audio = new Audio(src);
+        const normalized = Math.max(0, Math.min(1, pct / 100));
+        const scale = isRunning ? 0.5 : 1;
+        audio.volume = Math.min(1, normalized * scale);
+        audio.play().catch(() => {});
+      } catch(_) {}
+    }
     function openSettings() {
       settingsOpen = true;
       settingsPanel.style.display = 'block';
@@ -1711,6 +1822,7 @@
       try { settingsContent.appendChild(musicMuteBtn); musicMuteBtn.style.display = ''; updateMusicMuteUI(); } catch(_){ }
       try { settingsContent.appendChild(sfxWrap); sfxWrap.style.display = ''; } catch(_){ }
       try { settingsContent.appendChild(sfxMuteBtn); sfxMuteBtn.style.display = ''; updateSfxMuteUI(); } catch(_){ }
+      try { updateSfxVolumeUI(); } catch(_){}
       try { settingsContent.appendChild(paparazziBtn); paparazziBtn.style.display = ''; } catch(_){ }
       try { if (window.bgAudioControls && window.bgAudioControls.wireSlider) window.bgAudioControls.wireSlider(); } catch(_){}}
     function closeSettings() {
@@ -1758,16 +1870,17 @@
         // Music volume
         const musicSlider = document.getElementById('musicSlider');
         const musicLabel = document.getElementById('musicLabel');
-        if (musicSlider) musicSlider.value = '50';
-        if (musicLabel) musicLabel.textContent = '50%';
+        if (musicSlider) musicSlider.value = '125';
+        if (musicLabel) musicLabel.textContent = '125%';
           try {
             if (window.bgAudioControls && window.bgAudioControls.setVolumePct) {
-              window.bgAudioControls.setVolumePct(50);
+              window.bgAudioControls.setVolumePct(125);
             } else {
-              localStorage.setItem('musicVolPct','50');
+              localStorage.setItem('musicVolPct','125');
             }
           } catch(_) {}
-          // SFX mute reset
+          // SFX volume/mute reset
+          applySfxVolumePct(SFX_VOLUME_DEFAULT);
           try { localStorage.setItem('sfxMuted','false'); } catch(_) {}
           updateSfxMuteUI();
         } catch(_) {}
@@ -1834,6 +1947,12 @@
         setSfxMuted(!muted);
       });
     }
+    if (sfxSlider) {
+      const handleSfxSliderChange = () => applySfxVolumePct(sfxSlider.value);
+      sfxSlider.addEventListener('input', handleSfxSliderChange);
+      sfxSlider.addEventListener('change', handleSfxSliderChange);
+    }
+    try { updateSfxVolumeUI(); } catch(_){}
     // Hide controls by default until settings opened
     if (helpBtn) helpBtn.addEventListener('click', () => {
       // Open the same modal content as the 'about' door
@@ -2102,6 +2221,26 @@
           legend.style.display = 'none';
         });
       }
+    })();
+
+    (function scaleLegendForSmallScreens(){
+      const legend = document.getElementById('legend');
+      if (!legend) return;
+      function updateScale() {
+        const width = window.innerWidth || document.documentElement.clientWidth;
+        const height = window.innerHeight || document.documentElement.clientHeight;
+        const isPortrait = height >= width;
+        let scale = 2;
+        if (isPortrait) {
+          if (width <= 360) scale = 1;
+          else if (width <= 480) scale = 1.15;
+          else if (width <= 640) scale = 1.35;
+          else scale = 1.55;
+        }
+        legend.style.setProperty('--legend-scale', scale.toFixed(2));
+      }
+      updateScale();
+      window.addEventListener('resize', updateScale);
     })();
 
     // TOOLTIP
@@ -2824,6 +2963,7 @@
     // drawPaparazziForeground() removed (unused)
 
     function update(dt) { // Update simulation for one frame
+      const wasWalkingPrev = player.walking;
       player.walking = false; // Reset walking flag
       const isRunning = (keys.runToggle || keys.shiftRun); // effective sprint: toggle OR Shift
       const runMul = isRunning ? 3.6 : 1; // sprint speed multiplier
@@ -2848,6 +2988,19 @@
       if (keys.right) { player.x += world.speed * runMul * 60 * dt; player.facing = 1;  player.walking = true; } // Move right
       player.x = Math.max(world.minX, Math.min(world.maxX, player.x)); // Clamp player within world bounds
       if (player.walking) player.t += dt * (isRunning ? 3.0 : 1); else player.t *= 0.8; // Faster gait when running
+      const stepInterval = isRunning ? FOOTSTEP_INTERVALS.run : FOOTSTEP_INTERVALS.walk;
+      if (player.walking && stepInterval > 0) {
+        footstepElapsed += dt;
+        if (footstepElapsed >= stepInterval) {
+          footstepElapsed -= stepInterval;
+          playFootstepSound(isRunning);
+        }
+      } else {
+        footstepElapsed = 0;
+      }
+      if (wasWalkingPrev && !player.walking) {
+        playFootstepStopSound();
+      }
 
       // Update avatar sprite animation (idle/walk + facing)
       if (!player.anim) player.anim = { key: 'idleRight', frame: 0, accum: 0 };
@@ -3020,7 +3173,7 @@
       chooseAudioSource();
       const getPct = () => {
         const v = Number(localStorage.getItem('musicVolPct'));
-        return Number.isFinite(v) ? clamp(v, 0, 150) : 50; // default 50%
+        return Number.isFinite(v) ? clamp(v, 0, 150) : 125; // default 125%
       };
       const ensureGraph = () => {
         if (ctx) return;
@@ -3120,23 +3273,49 @@
         'assets/sounds/Camera_2.wav',
         'assets/sounds/Camera_3.wav',
       ];
-      const state = { timer: null };
+      const SFX_VOLUME_STORAGE_KEY = 'sfxVolumePct';
+      const SFX_VOLUME_DEFAULT = 6;
+      const state = { timer: null, volumePct: SFX_VOLUME_DEFAULT };
+      let cameraSoundsEnabled = window.paparazziOn !== false;
+      function setCameraSoundsEnabled(on) {
+        cameraSoundsEnabled = Boolean(on);
+      }
+      function clampSfxVolumePct(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return SFX_VOLUME_DEFAULT;
+        return Math.max(0, Math.min(100, Math.round(n)));
+      }
+      function readSfxVolumePct() {
+        try {
+          const stored = Number(localStorage.getItem(SFX_VOLUME_STORAGE_KEY));
+          if (Number.isFinite(stored)) return clampSfxVolumePct(stored);
+        } catch(_) {}
+        return SFX_VOLUME_DEFAULT;
+      }
+      function setVolumePct(value) {
+        state.volumePct = clampSfxVolumePct(value);
+        try { localStorage.setItem(SFX_VOLUME_STORAGE_KEY, String(state.volumePct)); } catch(_) {}
+        return state.volumePct;
+      }
+      state.volumePct = readSfxVolumePct();
       function readMuted(){
         try { return localStorage.getItem('sfxMuted') === 'true'; } catch(_) { return false; }
       }
       function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
       function playCamera(){
         try {
+          if (!cameraSoundsEnabled) return;
           if (readMuted()) return;
           const src = pick(CAMERA_SOUNDS);
           const a = new Audio(src);
-          a.volume = 0.6; // base SFX volume
+          const vol = Math.max(0, Math.min(1, (state.volumePct / 100) * 0.5));
+          a.volume = vol;
           a.play().catch(()=>{});
         } catch(_) {}
       }
       function schedule(){
         clearTimeout(state.timer);
-        const delay = 1200 + Math.random()*2800; // 1.2s - 4s
+        const delay = (1200 + Math.random()*2800) * 0.6; // slower tempo (approx 0.72s - 2.4s)
         state.timer = setTimeout(() => {
           if (!readMuted() && document.visibilityState !== 'hidden') {
             playCamera();
@@ -3148,6 +3327,12 @@
       window.sfxControls = {
         setMuted: (m) => { try { localStorage.setItem('sfxMuted', String(!!m)); } catch(_) {} },
         isMuted: () => readMuted(),
+        setVolumePct,
+        getVolumePct: () => state.volumePct,
+      };
+      window.cameraSoundControls = {
+        setEnabled: setCameraSoundsEnabled,
+        isEnabled: () => cameraSoundsEnabled,
       };
       // Start scheduling immediately; playback will self-skip if muted or tab hidden
       schedule();
