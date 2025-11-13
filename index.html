@@ -29,6 +29,20 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* Nice default font stack */
       overflow: hidden; /* Hide scrollbars; camera handles movement */
     }
+    html.mobile-browser #settingsPanel {
+      width: min(92vw, 320px);
+      left: 6px;
+      top: 40px;
+    }
+    html.mobile-browser #controls {
+      right: 6px;
+      bottom: 6px;
+    }
+    html.mobile-browser #settingsBtn,
+    html.mobile-browser #helpBtn {
+      transform-origin: top left;
+      transform: scale(0.95);
+    }
     @media (max-width: 640px) {
       body {
         padding-bottom: 72px;
@@ -1156,6 +1170,36 @@
     // Expose view only; removed console tuning helpers for a leaner API
     window.view = view;
     if (view.baseScale == null) view.baseScale = view.scale; // store base scale
+    function isMobileBrowserUA() {
+      try {
+        const ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
+        return /Mobi|Android|iP(ad|hone|od)|IEMobile|Windows Phone|Opera Mini|BlackBerry/i.test(ua);
+      } catch (_) {
+        return false;
+      }
+    }
+    function isSafariBrowser() {
+      try {
+        const ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
+        return /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/i.test(ua);
+      } catch (_) {
+        return false;
+      }
+    }
+    function applyMobileBrowserMode() {
+      if (isMobileBrowserUA() || isSafariBrowser()) {
+        document.documentElement.classList.add('mobile-browser');
+        const scale = autoScaleForWidth(vw);
+        view.autoScale = true;
+        view.autoScaleLandscape = true;
+        view.scale = scale;
+        view.baseScale = scale;
+        view.landscapeScale = scale;
+      } else {
+        document.documentElement.classList.remove('mobile-browser');
+      }
+    }
+    applyMobileBrowserMode();
     // Paparazzi toggle (global)
     window.paparazziOn = true;
     // Removed console tuning helpers: setViewScale/setGlobalScale/setViewOffset/setLandscape*/setEdgeFades*
@@ -1517,6 +1561,7 @@
         window.paparazziOn = !window.paparazziOn;
         paparazziBtn.setAttribute('aria-pressed', String(window.paparazziOn));
         paparazziBtn.textContent = 'Paparazzi: ' + (window.paparazziOn ? 'On' : 'Off');
+        if (!window.paparazziOn && typeof window.pausePaparazziSounds === 'function') window.pausePaparazziSounds();
       });
     }
     // Toggle on-screen controls (lower-left gamepad buttons)
@@ -1788,6 +1833,7 @@
         }
         if (sfxSlider) sfxSlider.value = String(pct);
         if (sfxVolumeLabel) sfxVolumeLabel.textContent = pct + '%';
+        updateCurtainAudioVolumes(pct);
       } catch(_) {}
     }
     const FOOTSTEP_WALK_SOUNDS = [
@@ -1804,8 +1850,17 @@
       'assets/sounds/Step_Run_3.wav',
       'assets/sounds/Step_Run_4.wav',
     ];
-    const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.45 };
+    const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.48 };
+    const FOOTSTEP_STOP_SOUND = 'assets/sounds/Step_Stop_0.wav';
     let footstepElapsed = 0;
+    let wasWalkingLastFrame = false;
+    const curtainAudioCache = {
+      open: { src: 'assets/sounds/Curtain_Open.wav', audio: null },
+      close: { src: 'assets/sounds/Curtain_Close.wav', audio: null },
+    };
+    const CURTAIN_SOUND_THRESHOLD = 0.0005;
+    let curtainMovementDetected = false;
+    let curtainMovementSignal = null;
     function pickFootstepSound(list) {
       if (!Array.isArray(list) || list.length === 0) return null;
       return list[Math.floor(Math.random() * list.length)];
@@ -1823,6 +1878,68 @@
         audio.play().catch(() => {});
       } catch(_) {}
     }
+    function playStopSound() {
+      try {
+        if (isSfxMuted()) return;
+        const pct = getSfxVolumePctForUI();
+        if (pct <= 0) return;
+        const audio = new Audio(FOOTSTEP_STOP_SOUND);
+        audio.volume = Math.min(1, Math.max(0, pct / 100));
+        audio.play().catch(() => {});
+      } catch(_) {}
+    }
+    function ensureCurtainAudio(direction) {
+      const entry = curtainAudioCache[direction];
+      if (!entry) return null;
+      if (!entry.audio) {
+        const audio = new Audio(entry.src);
+        audio.loop = true;
+        audio.preload = 'auto';
+        entry.audio = audio;
+      }
+      entry.audio.volume = Math.min(1, Math.max(0, getSfxVolumePctForUI() / 100));
+      return entry.audio;
+    }
+    function pauseCurtainAudio(direction) {
+      if (direction) {
+        const entry = curtainAudioCache[direction];
+        if (entry && entry.audio && !entry.audio.paused) entry.audio.pause();
+      } else {
+        for (const key of Object.keys(curtainAudioCache)) {
+          const audio = curtainAudioCache[key].audio;
+          if (audio && !audio.paused) audio.pause();
+        }
+      }
+    }
+    function reportCurtainMovement(direction) {
+      if (!direction) return;
+      curtainMovementDetected = true;
+      curtainMovementSignal = direction;
+    }
+    function processCurtainMovement() {
+      if (isSfxMuted()) { pauseCurtainAudio(); return; }
+      if (!curtainMovementDetected || !curtainMovementSignal) {
+        pauseCurtainAudio();
+        return;
+      }
+      const audio = ensureCurtainAudio(curtainMovementSignal);
+      if (audio && audio.paused) {
+        audio.play().catch(() => {});
+      }
+      const other = curtainMovementSignal === 'open' ? 'close' : 'open';
+      pauseCurtainAudio(other);
+    }
+    function resetCurtainMovementSignal() {
+      curtainMovementDetected = false;
+      curtainMovementSignal = null;
+    }
+    function updateCurtainAudioVolumes(pct) {
+      for (const entry of Object.values(curtainAudioCache)) {
+        if (entry.audio) entry.audio.volume = Math.min(1, Math.max(0, pct / 100));
+      }
+    }
+    updateCurtainAudioVolumes(getSfxVolumePctForUI());
+    const curtainSoundState = new Map();
     function openSettings() {
       settingsOpen = true;
       settingsPanel.style.display = 'block';
@@ -1946,6 +2063,7 @@
     function setSfxMuted(m) {
       try { localStorage.setItem('sfxMuted', String(!!m)); } catch(_) {}
       try { if (window.sfxControls && window.sfxControls.setMuted) window.sfxControls.setMuted(!!m); } catch(_) {}
+      if (m) pauseCurtainAudio();
       updateSfxMuteUI();
     }
     function updateSfxMuteUI(){
@@ -2362,8 +2480,12 @@
       }
     }
 
+    let bestCurtainDirection = null;
+    let bestCurtainDist = Infinity;
     function drawCurtains() { // Big red curtains framing the stage
       const topH = Math.max(60, world.runwayY() - (220 + CURTAIN_LIFT)); // Height of top valance (raised)
+      bestCurtainDirection = null;
+      bestCurtainDist = Infinity;
       // Extend width beyond screen so edges are never visible when zoomed out
       const s = Number(view && view.scale) > 0 ? Number(view.scale) : 1;
       const bleed = Math.max(200, Math.ceil((1/s - 1) * vw) + 200); // extra draw width on both sides
@@ -2852,6 +2974,16 @@
       // Scale opening radius with zoom so curtains don't open too early when zoomed in
       const radius = 220 * Math.max(1, Number(view && view.scale) || 1); // distance at which curtains fully closed
       const open = Math.max(0, Math.min(1, 1 - dist / radius)); // 0..1
+      const stateKey = sec.key || (sec.title || (String(sec.x) + ':' + String(sec.w)));
+      const prev = curtainSoundState.get(stateKey) || { last: open };
+      const delta = open - prev.last;
+      prev.last = open;
+      curtainSoundState.set(stateKey, prev);
+      const absDelta = Math.abs(delta);
+      if (absDelta > CURTAIN_SOUND_THRESHOLD && dist < (bestCurtainDist ?? Infinity)) {
+        bestCurtainDist = dist;
+        bestCurtainDirection = delta > 0 ? 'open' : 'close';
+      }
       const minCurtain = 10; // min width of each curtain when fully open
       const overlap = 6; // small overlap so no sliver shows through
       const gap = Math.max(0, open * (boxW - minCurtain*2) - overlap);
@@ -2902,7 +3034,6 @@
         showTooltip(Math.round(pt.x), Math.round(pt.y), 'Press Up or Enter to open', sec.key);
       }
     }
-    
 
     function drawPlayer() { // Avatar (sprite sheet if available; fallback to blocky)
       // Raise the avatar 5px to better center on the catwalk
@@ -2992,6 +3123,10 @@
       } else {
         footstepElapsed = 0;
       }
+      if (wasWalkingLastFrame && !player.walking) {
+        playStopSound();
+      }
+      wasWalkingLastFrame = player.walking;
 
       // Update avatar sprite animation (idle/walk + facing)
       if (!player.anim) player.anim = { key: 'idleRight', frame: 0, accum: 0 };
@@ -3088,6 +3223,7 @@
 
       // drawBackgroundParallax(); // Disabled to remove tiny background speckle dots
       
+      resetCurtainMovementSignal();
       drawCurtains();           // Big red curtains framing the stage
       drawSpotlights();         // Moving soft lights (in front of curtains)
 
@@ -3109,6 +3245,8 @@
         if (scrX + sec.w < -50 || scrX > vw + 50) continue; // Skip if far off-screen
         drawMarquee(sec); // Draw this marquee
       }
+      if (bestCurtainDirection) reportCurtainMovement(bestCurtainDirection);
+      processCurtainMovement();
       
        // Foreground silhouettes and flashes (behind player)
       drawPlayer(); // Draw the model/figure
@@ -3264,6 +3402,8 @@
         'assets/sounds/Camera_2.wav',
         'assets/sounds/Camera_3.wav',
       ];
+      const PAPARAZZI_AUDIO_ACTIVE = new Set();
+      const CAMERA_VOLUME_SCALE = 0.5;
       const SFX_VOLUME_STORAGE_KEY = 'sfxVolumePct';
       const SFX_VOLUME_DEFAULT = 6;
       const state = { timer: null, volumePct: SFX_VOLUME_DEFAULT };
@@ -3279,6 +3419,13 @@
         } catch(_) {}
         return SFX_VOLUME_DEFAULT;
       }
+      function pausePaparazziSounds() {
+        PAPARAZZI_AUDIO_ACTIVE.forEach(a => {
+          try { a.pause(); } catch(_) {}
+          PAPARAZZI_AUDIO_ACTIVE.delete(a);
+        });
+      }
+      window.pausePaparazziSounds = pausePaparazziSounds;
       function setVolumePct(value) {
         state.volumePct = clampSfxVolumePct(value);
         try { localStorage.setItem(SFX_VOLUME_STORAGE_KEY, String(state.volumePct)); } catch(_) {}
@@ -3291,10 +3438,14 @@
       function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
       function playCamera(){
         try {
-          if (readMuted()) return;
+          if (readMuted() || window.paparazziOn === false) return;
           const src = pick(CAMERA_SOUNDS);
           const a = new Audio(src);
-          const vol = Math.max(0, Math.min(1, state.volumePct / 100));
+          PAPARAZZI_AUDIO_ACTIVE.add(a);
+          const cleanup = () => { PAPARAZZI_AUDIO_ACTIVE.delete(a); };
+          a.addEventListener('ended', cleanup);
+          a.addEventListener('pause', cleanup);
+          const vol = Math.max(0, Math.min(1, (state.volumePct / 100) * CAMERA_VOLUME_SCALE));
           a.volume = vol;
           a.play().catch(()=>{});
         } catch(_) {}
