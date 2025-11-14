@@ -1229,7 +1229,7 @@
 
     // Define sections used by the seven doors (final content)
     sections = [
-      // Quick Sign-Up door near spawn (to the left)
+      // Door 1 - Artist Sign-Up
       { x: -615, w: 340, key: 'signup', title: 'Artist Sign-Up', content: `
         <p>Show your style on the runway. Enter the raffle to become a featured artist for an upcoming monthly show.</p>
         <h4>What you'll make</h4>
@@ -1263,8 +1263,8 @@
           <a class="navBtn" href="#" data-close>Back to Runway</a>
         </div>
       `},
-      // Door 1 - About This Website
-      { x: 400, w: 360, key: 'about', title: 'What is the Fashion Show', content: `
+      // Door 2 - What is the Fashion Show
+      { x: 400, w: 360, key: 'show', title: 'What is the Fashion Show', content: `
         <p>Each month, four featured artists present a themed gearset on a playable catwalk inside The Sandbox. Artists walk the runway for live judging, while the audience joins in from the stands.</p>
         <p>During the show, attendees earn Catwalk Coins (CWK) by exploring, dancing, and other ways. Then they spend CWK to vote for their favorite creations. Judges' scores and audience votes are tallied together to spotlight the monthly winner.</p>
         <ul>
@@ -1280,55 +1280,18 @@
           <a class="navBtn" href="https://www.sandbox.game/en/create/game-maker/" target="_blank" rel="noopener">Get Game Maker (Build Experiences)</a>
         </div>
       `},
-      // Door 2 - The Show
-      { x: 1100, w: 360, key: 'show', title: 'The Fashion Show Origin', content: `
-        <p>Each month, four featured artists present a themed gearset on a playable catwalk inside The Sandbox. Artists walk the runway for live judging, while the audience joins in from the stands.</p>
-        <p>During the show, attendees earn Catwalk Coins (CWK) by exploring, dancing, and other ways. Then they spend CWK to vote for their favorite creations. Judges' scores and audience votes are tallied together to spotlight the monthly winner.</p>
-        <ul>
-          <li>One main show every month</li>
-          <li>Four artists compete per show</li>
-          <li>Live panel scores: craft, originality, theme fit</li>
-          <li>Audience voting with CWK during timed windows (in-experience)</li>
-          <li>Live leaderboard moments</li>
-        </ul>
+      // Door 3 - Fashion Show Origin
+      { x: 1100, w: 360, key: 'origin', title: 'The Fashion Show Origin', content: `
+        <p>This show was seeded by a community grant from The Sandbox DAO—funding creators to experiment, tell stories, and put voxel fashion in the spotlight. What began as an idea to showcase voxel artists on a catwalk prototype became a full showcase thanks to DAO support and feedback from builders like you. We’re committed to transparency, community credit, and sharing what we learn so more creators can ship bold ideas.</p>
         <div class="ctaRow">
-          <a class="navBtn" href="https://www.sandbox.game/en/experiences/The%20Sandbox%20-%20Fashion%20Show/e157abb3-bda0-44c5-a769-8f797f1ebbd4/page/" target="_blank" rel="noopener">Visit Experience Page</a>
-          <a class="navBtn" href="https://www.sandbox.game/en/create/vox-edit/" target="_blank" rel="noopener">Get VoxEdit (Create Gear)</a>
-          <a class="navBtn" href="https://www.sandbox.game/en/create/game-maker/" target="_blank" rel="noopener">Get Game Maker (Build Experiences)</a>
+          <a class="navBtn" href="https://www.sandboxdao.com/" target="_blank" rel="noopener">Open The Sandbox DAO</a>
+          <a class="navBtn" href="https://forum.sandboxdao.com/t/sandbox-fashion-show/2744" target="_blank" rel="noopener">Read the Proposal</a>
+          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Get Updates (Discord)</a>
         </div>
       `},
-      // Door 3 - How the Show Works (In The Sandbox)
-      { x: 1900, w: 360, key: 'origin', title: 'The Fashion Show Website', content: `` },
-      // Door 4 - Being an Artist on the Show
-      { x: 2700, w: 360, key: 'artists', title: 'Being an Artist', content: `
-        <p><strong>Build a full voxel gear set in VoxEdit and bring it to the runway.</strong></p>
-        <h4>What you make</h4>
-        <ul>
-          <li><strong>Required:</strong> Headpiece, Chest, Arms, Legs</li>
-          <li><strong>Optional:</strong> Main-hand and Off-hand equipment</li>
-          <li>Original work, show-safe, and created in VoxEdit</li>
-        </ul>
-        <h4>How selection works</h4>
-        <ul>
-          <li>Sign up on the Google Form to enter the primary raffle (new artists first).</li>
-          <li>If slots remain, a secondary raffle includes returning artists from past shows.</li>
-        </ul>
-        <h4>Timeline</h4>
-        <ul>
-          <li>A theme is announced after the raffle.</li>
-          <li>You have ~3 weeks to finish your gear set.</li>
-          <li>Deliverables: 3-5 hero images, short description, display name/socials (asset files for tech check).</li>
-        </ul>
-        <p><strong>Need help?</strong> Join Discord for Q&amp;A, feedback, and tech checks.</p>
-        <div class="ctaRow">
-          <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Artist Raffle Form</a>
-          <a class="navBtn" href="https://www.sandbox.game/en/create/vox-edit/" target="_blank" rel="noopener">Download VoxEdit</a>
-          <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
-        </div>
-      `},
-      // Door 5 - Judging & How to Join
-      { x: 3500, w: 360, key: 'judging', title: 'Judging', content: `
-        <p>Artists show a gearset on the live runway while a panel scores each look and the audience adds momentum.</p>
+      // Door 4 - Judging
+      { x: 1900, w: 360, key: 'judging', title: 'Judging', content: `
+      <p>Artists show a gearset on the live runway while a panel scores each look and the audience adds momentum.</p>
         <h4>Scoring (how winners are chosen)</h4>
         <p><strong>Panel score (1-5 per judge):</strong> three judges each pick a number from 1-5.</p>
         <p>Criteria the judges consider:</p>
@@ -1340,39 +1303,75 @@
         </ul>
         <p><strong>Audience bonus (0-1):</strong> adds 0.0 -> 1.0 based on Catwalk Coins (CWK) supporting a look during the voting window.<br>
         <small>(Scaled per show; typically requires &gt; 5,000 CWK for the full +1.0 bonus.)</small></p>
-        <p><strong>Final tally</strong> = average panel score + audience bonus. Tie-breaks go to panel discussion.</p>
-      `},
-      // Door 6 - Join the Community
-      { x: 4300, w: 380, key: 'community', title: 'Join the Community', content: `
-        <p>Backstage passes live on Discord. Get announcements, submission windows, tech checks, WIP feedback, and post-show recaps. Meet other creators, share progress, and help shape what comes next.</p>
-        <h4>What you\u2019ll find</h4>
+        <p><strong>Final tally</strong> = average panel score + audience bonus. Tie-breaks go to panel discussion.</p>` },
+      // Door 5 - Community 
+      { x: 2700, w: 360, key: 'community', title: 'Join the Community', content: `
+        <p>Backstage lives on Discord. Get announcements, themes, submission windows, tech checks, WIP feedback, and post-show recaps. Meet other creators, ask questions, and help shape what comes next.</p>
+        <h4>Quick start (30 seconds)</h4>
         <ul>
-          <li><code>#announcements</code> &mdash; dates, themes, results</li>
-          <li><code>#artist-signup</code> &mdash; raffle reminders &amp; guidelines</li>
-          <li><code>#wip-critique</code> &mdash; share progress, get feedback</li>
-          <li><code>#tech-help</code> &mdash; VoxEdit/GameMaker setup help</li>
-          <li><code>#show-chat</code> &mdash; watch parties &amp; discussion</li>
+          <li>Read <code>#rules</code>.</li>
+          <li>Follow <code>#announcements</code> for dates &amp; themes.</li>
+          <li>Open <code>#forms</code> when you're ready to sign up.</li>
         </ul>
-        <h4>Roles &amp; pings</h4>
+        <h4>What you'll find</h4>
         <ul>
-          <li>Artist / Judge / Audience roles</li>
-          <li>Opt-in @Showtime and @ThemeDrop alerts</li>
+          <li><code>#welcome</code> &mdash; a place to wave and say hi!</li>
+          <li><code>#announcements</code> &mdash; show dates, theme drops, winners</li>
+          <li><code>#rules</code> &mdash; PG-13, be kind, zero harassment, no NSFW</li>
+          <li><code>#be-a-judge</code> &mdash; discord bot for earning raffle tickets and voting on the Artists gearsets!</li>
+          <li><code>#forms</code> &mdash; artist raffle</li>
+          <li><code>#experience-updates</code> &mdash; build notes, patch info, known issues</li>
+          <li><code>#event-rules</code> &mdash; format, scoring rubric, tie-breaks, prize details</li>
+          <li><code>#transactions-winners</code> &mdash; prize calls, proof, receipts</li>
         </ul>
-        <p>Friendly, modded, PG-13 space. Zero harassment. Bring good vibes.</p>
+        <p>Voice: <code>the-voice-chat</code>, <code>fashion-show-participants</code> for live shows.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
           <a class="navBtn" href="#" data-modal="rules">Read Server Rules</a>
           <a class="navBtn" href="#" data-modal="ask">Ask a Question</a>
         </div>
       `},
-      // Door 7 - Schedule & Following Along
-      { x: 5200, w: 380, key: 'schedule', title: 'Schedule & Following Along', content: `
-        <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channel-live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
+      // Door 6 - Schedule and Follow up
+      { x: 3500, w: 360, key: 'schedule', title: 'Schedule & Following Along', content: `
+      <p>We run one main show every month on the <strong>fredandferd</strong> Twitch channel-live runway, judges on mic, and chat energy. Between shows, follow updates and theme drops on our Impossible Dream Studio X account, or hop into Discord for reminders and Q&amp;A.</p>
         <p><em>Want to help between live shows?</em> Try the Discord judging bot: preview gear sets, score them, and earn a raffle ticket for each valid vote. Tickets are pulled during "Fun Stream Nights" on Twitch.</p>
         <div class="ctaRow">
           <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Follow on Twitch</a>
           <a class="navBtn" href="https://x.com/ImDream_Studio" target="_blank" rel="noopener">Follow on X</a>
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
+        </div>
+        ` },
+      // Door 7 - Gallery (Operational notes: Thumbnails stay ≤ 240px wide (~80–100 KB WebP), full images stay under 350–500 KB WebP, filenames follow \`gallery/YYYY-MM_slug_thumb/full\`, thumbs lazy-load, full capture loads only in the lightbox, and filters remain client-side buttons.)
+      { x: 4300, w: 380, key: 'gallery', title: 'Gallery', content: `
+        <p>Browse the runway highlights—hero shots, close-ups, and crowd moments. Tap a thumbnail to open a lightbox and swipe through. Creators can submit their best angles to be featured.</p>
+        <p><strong>Curated Highlights:</strong> 6–12 thumbnails mixing winners, fan favorites, and backstage moments.</p>
+        <p><strong>Categories:</strong> Winners • Runway • Backstage • Crowd • WIP</p>
+        <p><strong>Credits:</strong> Each image lists the Artist / Gearset name in a compact caption.</p>
+        <p><strong>Submission Rules:</strong> Original captures only, PG-13, no UI spam, 1920×1080 or 1600×900 preferred.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="#" data-modal="gallery">View Full Gallery</a>  
+          <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Submit a Screenshot</a>
+          <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Watch VODs</a>
+        </div>
+      `},
+      // Door 8 - Results
+      { x: 5200, w: 380, key: 'results', title: 'Results', content: `
+        <p>See who took the crown each month. Panel scores and audience momentum combine to spotlight the winner, with Judge’s Choice and Audience Favorite also recognized.</p>
+        <h4>This Month</h4>
+        <ul>
+          <li><strong>Champion:</strong> [Artist / Gearset] – final score</li>
+          <li><strong>Runner-Up:</strong> [Artist / Gearset] – final score</li>
+          <li><strong>Judge’s Choice:</strong> [Artist / Gearset] – note (why)</li>
+          <li><strong>Audience Favorite:</strong> [Artist / Gearset] – CWK highlight</li>
+        </ul>
+        <p><strong>Score Snapshot:</strong> panel average (1–5) + audience bonus (0–1) = final tally.</p>
+        <p><strong>Highlights:</strong> 2–3 sentences pulled from judges’ notes about this show.</p>
+        <p><strong>Archive:</strong> quick list of past months (link to gallery/VODs).</p>
+        <p><strong>Operational notes:</strong> keep a small JSON/list per month (month, winners, scores, links), include tiny 200×200 winner badge WebP images ≤ 60 KB, and stick to month slugs like 2025-01, 2025-02.</p>
+        <div class="ctaRow">
+          <a class="navBtn" href="#" data-modal="results">Open Full Results</a>
+          <a class="navBtn" href="#" data-modal="gallery">View Gallery</a>
+          <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Watch This Show’s VOD</a>
         </div>
       `}
     ];
