@@ -1584,10 +1584,10 @@
       // Repurpose slider: move camera DOWN to reveal more of the TOP (no zoom)
       // Map 0..100 -> 0..250 px of downward scene shift
       const valueToLift = (v) => Math.max(0, Math.min(250, Math.round(250 * (v/100))));
-      // Start with default 70% lift
-      zoomSlider.value = '70';
-      view.yLift = valueToLift(70);
-      if (zoomLabel) zoomLabel.textContent = '70%';
+      // Start with default 0% lift
+      zoomSlider.value = '0';
+      view.yLift = valueToLift(0);
+      if (zoomLabel) zoomLabel.textContent = '0%';
       view.autoScale = false; // ensure auto zoom doesn't fight manual lift
       zoomSlider.setAttribute('aria-label', 'Scroll Up');
       zoomSlider.addEventListener('input', () => {
@@ -1843,6 +1843,7 @@
     ];
     const FOOTSTEP_INTERVALS = { walk: 0.48, run: 0.48 };
     const FOOTSTEP_STOP_SOUND = 'assets/sounds/Step_Stop_0.wav';
+    const POPUP_OPEN_SOUND = 'assets/sounds/Step_Door_0.wav';
     let footstepElapsed = 0;
     let wasWalkingLastFrame = false;
     const curtainAudioCache = {
@@ -1856,12 +1857,9 @@
       if (!Array.isArray(list) || list.length === 0) return null;
       return list[Math.floor(Math.random() * list.length)];
     }
-    function playFootstepSound(isRunning) {
+    function playSfxClip(src) {
       try {
-        if (isSfxMuted()) return;
-        const list = isRunning ? FOOTSTEP_RUN_SOUNDS : FOOTSTEP_WALK_SOUNDS;
-        const src = pickFootstepSound(list);
-        if (!src) return;
+        if (!src || isSfxMuted()) return;
         const pct = getSfxVolumePctForUI();
         if (pct <= 0) return;
         const audio = new Audio(src);
@@ -1869,14 +1867,16 @@
         audio.play().catch(() => {});
       } catch(_) {}
     }
+    function playFootstepSound(isRunning) {
+      try {
+        const list = isRunning ? FOOTSTEP_RUN_SOUNDS : FOOTSTEP_WALK_SOUNDS;
+        const src = pickFootstepSound(list);
+        playSfxClip(src);
+      } catch(_) {}
+    }
     function playStopSound() {
       try {
-        if (isSfxMuted()) return;
-        const pct = getSfxVolumePctForUI();
-        if (pct <= 0) return;
-        const audio = new Audio(FOOTSTEP_STOP_SOUND);
-        audio.volume = Math.min(1, Math.max(0, pct / 100));
-        audio.play().catch(() => {});
+        playSfxClip(FOOTSTEP_STOP_SOUND);
       } catch(_) {}
     }
     function ensureCurtainAudio(direction) {
@@ -1965,10 +1965,10 @@
           paparazziBtn.setAttribute('aria-pressed','true');
           paparazziBtn.textContent = 'Paparazzi: On';
         }
-        // Scroll Up (y-lift) default to 70%
-        if (zoomSlider) { zoomSlider.value = '70'; }
-        if (zoomLabel) { zoomLabel.textContent = '70%'; }
-        view.yLift = Math.round(250 * 0.70);
+        // Scroll Up (y-lift) default to 0%
+        if (zoomSlider) { zoomSlider.value = '0'; }
+        if (zoomLabel) { zoomLabel.textContent = '0%'; }
+        view.yLift = Math.round(250 * 0);
         // On-screen controls size
         if (controlsSizeSlider) {
           controlsSizeSlider.value = '100';
@@ -2221,10 +2221,14 @@
     const modalContent = document.getElementById('modalContent'); // Content container
     document.getElementById('closeModal').addEventListener('click', closeModal); // Close on button
     modalWrap.addEventListener('click', (e) => { if (e.target === modalWrap) closeModal(); }); // Close when clicking backdrop
+    function playPopupOpenSound() {
+      playSfxClip(POPUP_OPEN_SOUND);
+    }
     function openModal(title, html) { // Show modal with given title/content
       modalTitle.textContent = title; // Set title text
       modalContent.innerHTML = html; // Inject provided HTML content
       modalWrap.style.display = 'grid'; // Reveal overlay (CSS grid centers modal)
+      playPopupOpenSound();
       // Always start scrolled to top for each door
       try {
         const modal = document.getElementById('modal');
@@ -2235,7 +2239,9 @@
       try { requestAnimationFrame(() => updateModalScrollPad()); } catch(_) {}
     }
     function closeModal() { // Hide the modal overlay
+      const wasVisible = modalWrap.style.display === 'grid';
       modalWrap.style.display = 'none';
+      if (wasVisible) playStopSound();
     }
 
     // Allow CTA links inside modals to cross-open sections or close
