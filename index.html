@@ -83,6 +83,116 @@
     #modal header { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; background:#121219; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.5); } /* Sticky modal header - solid & above body */
     #modal .content { padding: 16px; } /* Modal content area */
     #closeModal { appearance: none; background: rgba(255,255,255,0.1); color: var(--ui); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px 10px; cursor: pointer; } /* Close button */
+    .galleryIntro,
+    .resultsIntro { margin: 0 0 10px; font-size: 1rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
+    .galleryGrid,
+    .resultsGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .galleryItem,
+    .resultsItem {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      background: rgba(255,255,255,0.02);
+    }
+    .galleryItem img,
+    .resultsItem img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      transition: transform 0.25s ease;
+    }
+    .galleryItem:hover img {
+      transform: scale(1.05);
+    }
+    #galleryLightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 30;
+    }
+    #galleryLightbox.visible {
+      display: flex;
+    }
+    #galleryLightbox .lightboxImageWrap {
+      max-width: min(860px, 92vw);
+      max-height: 80vh;
+      width: 100%;
+      position: relative;
+    }
+    #galleryLightbox img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 24px 45px rgba(0, 0, 0, 0.8);
+    }
+    #galleryLightbox button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #galleryLightbox .lightboxClose {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      font-size: 1.8rem;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      line-height: 1;
+    }
+    #galleryLightbox .lightboxArrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 2rem;
+      opacity: 0.9;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45);
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    #galleryLightbox .lightboxArrow:hover {
+      opacity: 1;
+    }
+    #galleryLightbox .lightboxArrow.left {
+      left: 16px;
+    }
+    #galleryLightbox .lightboxArrow.right {
+      right: 16px;
+    }
+    #galleryLightbox .lightboxCaption {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.88);
+      text-align: center;
+      letter-spacing: 0.02em;
+      display: none;
+    }
 
     /* Mobile controls (optional) */
     #controls { position: fixed; right: 12px; bottom: 12px; display: grid; gap: 8px; z-index: 6; } /* Docked control cluster */
@@ -322,6 +432,15 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div id="galleryLightbox" aria-hidden="true" role="dialog" aria-label="Gallery preview">
+    <button class="lightboxClose" type="button" data-action="close" aria-label="Close gallery view">×</button>
+    <button class="lightboxArrow left" type="button" data-direction="prev" aria-label="Previous image">‹</button>
+    <button class="lightboxArrow right" type="button" data-direction="next" aria-label="Next image">›</button>
+    <div class="lightboxImageWrap">
+      <img id="galleryLightboxImage" src="" alt="" />
+      <div class="lightboxCaption" id="galleryLightboxCaption"></div>
     </div>
   </div>
   <canvas id="stage"></canvas> <!-- Fullscreen canvas used to draw the runway and avatar -->
@@ -1341,39 +1460,80 @@
           <a class="navBtn" href="https://discord.gg/fCMD3NkXMZ" target="_blank" rel="noopener">Join Discord</a>
         </div>
         ` },
-      // Door 7 - Gallery (Operational notes: Thumbnails stay ≤ 240px wide (~80–100 KB WebP), full images stay under 350–500 KB WebP, filenames follow \`gallery/YYYY-MM_slug_thumb/full\`, thumbs lazy-load, full capture loads only in the lightbox, and filters remain client-side buttons.)
+      // Door 7 - Gallery (lean version with thumbnails)
+
+
+
       { x: 4300, w: 380, key: 'gallery', title: 'Gallery', content: `
-        <p>Browse the runway highlights—hero shots, close-ups, and crowd moments. Tap a thumbnail to open a lightbox and swipe through. Creators can submit their best angles to be featured.</p>
-        <p><strong>Curated Highlights:</strong> 6–12 thumbnails mixing winners, fan favorites, and backstage moments.</p>
-        <p><strong>Categories:</strong> Winners • Runway • Backstage • Crowd • WIP</p>
-        <p><strong>Credits:</strong> Each image lists the Artist / Gearset name in a compact caption.</p>
-        <p><strong>Submission Rules:</strong> Original captures only, PG-13, no UI spam, 1920×1080 or 1600×900 preferred.</p>
-        <div class="ctaRow">
-          <a class="navBtn" href="#" data-modal="gallery">View Full Gallery</a>  
-          <a class="navBtn" href="https://docs.google.com/forms/d/e/1FAIpQLSejCyO7RukrV90BhihqQB3vkTJEC29arEzdcdXc1HONIPfXNQ/viewform?usp=send_form" target="_blank" rel="noopener">Submit a Screenshot</a>
-          <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Watch VODs</a>
+
+
+
+        <p class="galleryIntro">Browse the runway highlights-hero shots, close-ups, and crowd moments. Tap a thumbnail to open a lightbox and swipe through.</p>
+
+
+
+        <div class="galleryGrid">
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_0.jpg" alt="Runway highlight 1"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_1.jpg" alt="Runway highlight 2"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_2.jpg" alt="Runway highlight 3"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_3.jpg" alt="Runway highlight 4"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_4.jpg" alt="Runway highlight 5"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_5.jpg" alt="Runway highlight 6"></div>
+
+
+
+          <div class="galleryItem"><img data-lightbox-thumb="gallery" src="assets/images/gallery_6.jpg" alt="Runway highlight 7"></div>
+
+
+
         </div>
+
+
+
       `},
+
       // Door 8 - Results
+
       { x: 5200, w: 380, key: 'results', title: 'Results', content: `
-        <p>See who took the crown each month. Panel scores and audience momentum combine to spotlight the winner, with Judge’s Choice and Audience Favorite also recognized.</p>
-        <h4>This Month</h4>
-        <ul>
-          <li><strong>Champion:</strong> [Artist / Gearset] – final score</li>
-          <li><strong>Runner-Up:</strong> [Artist / Gearset] – final score</li>
-          <li><strong>Judge’s Choice:</strong> [Artist / Gearset] – note (why)</li>
-          <li><strong>Audience Favorite:</strong> [Artist / Gearset] – CWK highlight</li>
-        </ul>
-        <p><strong>Score Snapshot:</strong> panel average (1–5) + audience bonus (0–1) = final tally.</p>
-        <p><strong>Highlights:</strong> 2–3 sentences pulled from judges’ notes about this show.</p>
-        <p><strong>Archive:</strong> quick list of past months (link to gallery/VODs).</p>
-        <p><strong>Operational notes:</strong> keep a small JSON/list per month (month, winners, scores, links), include tiny 200×200 winner badge WebP images ≤ 60 KB, and stick to month slugs like 2025-01, 2025-02.</p>
-        <div class="ctaRow">
-          <a class="navBtn" href="#" data-modal="results">Open Full Results</a>
-          <a class="navBtn" href="#" data-modal="gallery">View Gallery</a>
-          <a class="navBtn" href="https://www.twitch.tv/fredandferd" target="_blank" rel="noopener">Watch This Show’s VOD</a>
+
+        <p class="resultsIntro">See who took the crown each month. Panel scores and audience energy combine to spotlight the Champion, with Judge's Choice and Audience Favorite rounding out the tally. Tap any of the winner thumbnails to launch the lightbox and swipe through all the credited looks.</p>
+
+        <div class="resultsGrid">
+
+          <div class="resultsItem">
+
+            <img data-lightbox-thumb="results" data-caption="2025 Champion — neon armor with mirrored visor" src="assets/images/results_0.png" alt="Champion look">
+
+          </div>
+
+          <div class="resultsItem">
+
+            <img data-lightbox-thumb="results" data-caption="Runner-up — couture streetwear in motion" src="assets/images/results_1.png" alt="Runner up look">
+
+          </div>
+
         </div>
+  
       `}
+
     ];
 
     // Assign per-door backdrop indices (exclude the quick sign-up door)
@@ -3466,6 +3626,122 @@
       };
       // Start scheduling immediately; playback will self-skip if muted or tab hidden
       schedule();
+    })();
+  </script>
+  <script>
+    (function(){
+      const lightbox = document.getElementById('galleryLightbox');
+      const modalContent = document.getElementById('modalContent');
+      const lightboxImage = document.getElementById('galleryLightboxImage');
+      const lightboxCaption = document.getElementById('galleryLightboxCaption');
+      if (!lightbox || !modalContent || !lightboxImage) return;
+      const prevBtn = lightbox.querySelector('[data-direction="prev"]');
+      const nextBtn = lightbox.querySelector('[data-direction="next"]');
+      const closeBtn = lightbox.querySelector('[data-action="close"]');
+      let galleryShots = [];
+      const lightboxThumbSelector = '[data-lightbox-thumb]';
+      let currentIndex = 0;
+      function refreshShots() {
+        const imgs = Array.from(modalContent.querySelectorAll(lightboxThumbSelector));
+        galleryShots = imgs.map((img, idx) => ({
+          src: img.src,
+          alt: img.alt || `Runway highlight ${idx + 1}`,
+          caption: img.dataset.caption || img.alt || `Runway highlight ${idx + 1}`,
+        }));
+      }
+      function clampIndex(idx) {
+        if (!galleryShots.length) return 0;
+        const len = galleryShots.length;
+        const mod = idx % len;
+        return mod < 0 ? mod + len : mod;
+      }
+      function updateCaption() {
+        if (!lightboxCaption) return;
+        const shot = galleryShots[currentIndex];
+        const base = shot && shot.caption ? shot.caption : '';
+        lightboxCaption.textContent = base
+          ? `[${currentIndex + 1}/${galleryShots.length}] ${base}`
+          : `[${currentIndex + 1}/${galleryShots.length}]`;
+      }
+      function showLightbox(index) {
+        refreshShots();
+        if (!galleryShots.length) return;
+        currentIndex = clampIndex(index);
+        const shot = galleryShots[currentIndex];
+        if (!shot) return;
+        lightboxImage.src = shot.src;
+        lightboxImage.alt = shot.alt;
+        updateCaption();
+        lightbox.setAttribute('aria-hidden', 'false');
+        lightbox.classList.add('visible');
+      }
+      function hideLightbox() {
+        lightbox.setAttribute('aria-hidden', 'true');
+        lightbox.classList.remove('visible');
+      }
+      function showPrev() {
+        if (!galleryShots.length) return;
+        showLightbox(currentIndex - 1);
+      }
+      function showNext() {
+        if (!galleryShots.length) return;
+        showLightbox(currentIndex + 1);
+      }
+      modalContent.addEventListener('click', (event) => {
+        const target = event.target.closest(lightboxThumbSelector);
+        if (!target) return;
+        const images = Array.from(modalContent.querySelectorAll(lightboxThumbSelector));
+        const index = images.indexOf(target);
+        if (index === -1) return;
+        event.stopPropagation();
+        showLightbox(index);
+      });
+      closeBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        hideLightbox();
+      });
+      prevBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        showPrev();
+      });
+      nextBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        showNext();
+      });
+      lightbox.addEventListener('click', (event) => {
+        if (event.target === lightbox) {
+          hideLightbox();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (!lightbox.classList.contains('visible')) return;
+        if (event.key === 'Escape') {
+          hideLightbox();
+          return;
+        }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          showNext();
+          return;
+        }
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          showPrev();
+        }
+      });
+      let pointerStartX = null;
+      lightbox.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        pointerStartX = event.clientX;
+      });
+      lightbox.addEventListener('pointerup', (event) => {
+        if (pointerStartX === null) return;
+        const deltaX = event.clientX - pointerStartX;
+        pointerStartX = null;
+        if (Math.abs(deltaX) < 30) return;
+        if (deltaX > 0) showPrev();
+        else showNext();
+      });
     })();
   </script>
 </body>
