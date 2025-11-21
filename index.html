@@ -3656,6 +3656,18 @@
         } catch(_) {}
         return SFX_VOLUME_DEFAULT;
       }
+      function getActiveSfxVolumePct() {
+        let pct = state.volumePct;
+        try {
+          if (typeof window !== 'undefined' && window.sfxVolumePctOverride != null) {
+            const override = Number(window.sfxVolumePctOverride);
+            if (Number.isFinite(override)) {
+              pct = clampSfxVolumePct(override);
+            }
+          }
+        } catch(_) {}
+        return pct;
+      }
       function pausePaparazziSounds() {
         PAPARAZZI_AUDIO_ACTIVE.forEach(a => {
           try { a.pause(); } catch(_) {}
@@ -3666,6 +3678,7 @@
       function setVolumePct(value) {
         state.volumePct = clampSfxVolumePct(value);
         try { localStorage.setItem(SFX_VOLUME_STORAGE_KEY, String(state.volumePct)); } catch(_) {}
+        try { window.sfxVolumePctOverride = state.volumePct; } catch(_) {}
         return state.volumePct;
       }
       state.volumePct = readSfxVolumePct();
@@ -3682,7 +3695,8 @@
           const cleanup = () => { PAPARAZZI_AUDIO_ACTIVE.delete(a); };
           a.addEventListener('ended', cleanup);
           a.addEventListener('pause', cleanup);
-          const vol = Math.max(0, Math.min(1, (state.volumePct / 100) * CAMERA_VOLUME_SCALE));
+          const volPct = getActiveSfxVolumePct();
+          const vol = Math.max(0, Math.min(1, (volPct / 100) * CAMERA_VOLUME_SCALE));
           a.volume = vol;
           a.play().catch(()=>{});
         } catch(_) {}
