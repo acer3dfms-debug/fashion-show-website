@@ -1726,6 +1726,7 @@
     const pngSizeSlider = document.getElementById('pngSizeSlider');
     const SFX_VOLUME_STORAGE_KEY = 'sfxVolumePct';
     const SFX_VOLUME_DEFAULT = 6;
+    let pendingSfxVolumePct = null;
     const pngSizeLabel = document.getElementById('pngSizeLabel');
     // Image Quality selector wiring
     if (imgQualitySelect) {
@@ -2021,18 +2022,33 @@
       return Math.max(0, Math.min(100, Math.round(n)));
     }
     function getSfxVolumePctForUI() {
+      if (Number.isFinite(pendingSfxVolumePct)) {
+        const pct = clampSfxVolumePct(pendingSfxVolumePct);
+        try { window.sfxVolumePctOverride = pct; } catch(_) {}
+        return pct;
+      }
       try {
         const getter = window.sfxControls && window.sfxControls.getVolumePct;
         if (typeof getter === 'function') {
           const val = Number(getter());
-          if (Number.isFinite(val)) return clampSfxVolumePct(val);
+          if (Number.isFinite(val)) {
+            pendingSfxVolumePct = clampSfxVolumePct(val);
+            try { window.sfxVolumePctOverride = pendingSfxVolumePct; } catch(_) {}
+            return pendingSfxVolumePct;
+          }
         }
       } catch(_) {}
       try {
         const stored = Number(localStorage.getItem(SFX_VOLUME_STORAGE_KEY));
-        if (Number.isFinite(stored)) return clampSfxVolumePct(stored);
+        if (Number.isFinite(stored)) {
+          pendingSfxVolumePct = clampSfxVolumePct(stored);
+          try { window.sfxVolumePctOverride = pendingSfxVolumePct; } catch(_) {}
+          return pendingSfxVolumePct;
+        }
       } catch(_) {}
-      return SFX_VOLUME_DEFAULT;
+      pendingSfxVolumePct = SFX_VOLUME_DEFAULT;
+      try { window.sfxVolumePctOverride = pendingSfxVolumePct; } catch(_) {}
+      return pendingSfxVolumePct;
     }
     function updateSfxVolumeUI() {
       try {
@@ -2044,6 +2060,8 @@
     function applySfxVolumePct(value) {
       try {
         const pct = clampSfxVolumePct(value);
+        pendingSfxVolumePct = pct;
+        try { window.sfxVolumePctOverride = pct; } catch(_) {}
         if (window.sfxControls && typeof window.sfxControls.setVolumePct === 'function') {
           window.sfxControls.setVolumePct(pct);
         } else {
@@ -2304,6 +2322,7 @@
       sfxSlider.addEventListener('change', handleSfxSliderChange);
     }
     try { updateSfxVolumeUI(); } catch(_){}
+    try { window.sfxVolumePctOverride = pendingSfxVolumePct; } catch(_) {}
     // Hide controls by default until settings opened
     if (helpBtn) {
       helpBtn.addEventListener('click', () => {
@@ -3621,6 +3640,16 @@
         return Math.max(0, Math.min(100, Math.round(n)));
       }
       function readSfxVolumePct() {
+        try {
+          if (typeof window !== 'undefined' && window.sfxVolumePctOverride != null) {
+            const override = Number(window.sfxVolumePctOverride);
+            if (Number.isFinite(override)) {
+              const pct = clampSfxVolumePct(override);
+              try { localStorage.setItem(SFX_VOLUME_STORAGE_KEY, String(pct)); } catch(_) {}
+              return pct;
+            }
+          }
+        } catch(_) {}
         try {
           const stored = Number(localStorage.getItem(SFX_VOLUME_STORAGE_KEY));
           if (Number.isFinite(stored)) return clampSfxVolumePct(stored);
